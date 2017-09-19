@@ -1,0 +1,25 @@
+Room for improvement:
+=====================
+
+Lexer
+-----
+
+JbToken is too heavy - subclassing can be used for for 
+1) fixed text tokens
+2) line & col can be but into a single int
+
+Smart CharSequence
+
+Line endings
+
+StringBufferInputStream in test
+
+
+Parser
+------
+
+All
+---
+
+I18N
+
