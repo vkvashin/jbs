@@ -93,7 +93,7 @@ public class LexerImpl {
                 if (c == 0) {
                     return null;
                 }
-                if (Character.isSpaceChar(c)) {
+                if (isSpace(c)) {
                     continue;
                 } else {
                     break;
@@ -235,5 +235,9 @@ public class LexerImpl {
                 return JbToken.createFixed(JbToken.Kind.SUB, is.getLine(), is.getColumn());
             }            
         }
-    }    
+    }
+    
+    private static boolean isSpace(char c) {
+        return c == '\n' || c == '\r' || Character.isSpaceChar(c);
+    }
 }
