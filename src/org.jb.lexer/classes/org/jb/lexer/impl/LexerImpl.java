@@ -134,7 +134,7 @@ public class LexerImpl {
                 case '=':
                     return JbToken.createFixed(JbToken.Kind.EQ, is.getLine(), is.getColumn());
                 default:
-                    return readIdOrFunction(c);
+                    return readIdVarOrFunction(c);
             }
         }
 
@@ -175,7 +175,7 @@ public class LexerImpl {
             return JbToken.create(JbToken.Kind.STRING, sb, line, col);
         }
 
-        private JbToken readIdOrFunction(char c) throws JbTokenStreamException, IOException {
+        private JbToken readIdVarOrFunction(char c) throws JbTokenStreamException, IOException {
             if (!Character.isJavaIdentifierStart(c)) {
                 throw new JbTokenStreamException("Syntax error: unexpected character '" + c + "' at " + is.getLine() + ':' + is.getColumn());
             }
@@ -186,7 +186,7 @@ public class LexerImpl {
                 sb.append(c);
             }
             is.unread(c);
-            for (JbToken.Kind kind : new JbToken.Kind[] {JbToken.Kind.MAP, JbToken.Kind.REDUCE, JbToken.Kind.PRINT, JbToken.Kind.OUT}) {
+            for (JbToken.Kind kind : new JbToken.Kind[] {JbToken.Kind.MAP, JbToken.Kind.REDUCE, JbToken.Kind.PRINT, JbToken.Kind.OUT, JbToken.Kind.VAR}) {
                 assert kind.isFixedText();
                 if (kind.getFixedText().contentEquals(sb)) {
                     return JbToken.createFixed(kind, line, col);

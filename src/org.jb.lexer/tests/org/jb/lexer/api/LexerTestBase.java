@@ -16,6 +16,8 @@ import org.junit.Assert;
  * @author vkvashin
  */
 public class LexerTestBase {
+    
+    private boolean debug = false;
 
     protected JbTokenStream lex(String text) {
         // StringBufferInputStream is deprecated since it does not work with non-ascii well.
@@ -24,6 +26,10 @@ public class LexerTestBase {
         return new JbLexer(is).lex();
     }
     
+    protected void setDebug(boolean debug) {
+        this.debug = debug;    
+    }
+
     protected void printTokens(JbTokenStream ts) throws Exception {
         JbToken tok;
         while((tok = ts.next()) != null) {
@@ -31,11 +37,24 @@ public class LexerTestBase {
         }        
     }
 
+    protected void lexAndPrint(String text) throws Exception {
+        String[] lines = text.split("\n");
+        System.out.println("=== Printing tokens for " + lines[0] + (lines.length > 1 ? " ..." : ""));
+        printTokens(lex(text));
+    }
+
     protected void doSimpleTest(String text, JbToken...refTokens) throws Exception {
+        if (debug) {
+            String[] lines = text.split("\n");
+            System.out.println("=== doSimpleTest " + lines[0] + (lines.length > 1 ? " ..." : ""));
+        }
         JbTokenStream ts = lex(text);
         JbToken last = null;
         for (JbToken expected : refTokens) {
             JbToken actual = ts.next();
+            if (debug) {
+                System.out.println(actual);
+            }
             Assert.assertNotNull("Premature end of token stream. Last token was " + last, actual);
             last = actual;
             assertEquals(expected, actual);
