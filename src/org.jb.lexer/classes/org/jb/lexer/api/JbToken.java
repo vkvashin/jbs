@@ -16,6 +16,7 @@ public final class JbToken {
         FLOAT,  // float literal
         STRING, // literal string
         ID,     // identifier
+        VAR("var"),
         ADD("+"),
         SUB("-"),
         DIV("/"),
