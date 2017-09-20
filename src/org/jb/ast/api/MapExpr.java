@@ -47,6 +47,6 @@ public final class  MapExpr extends Expr {
 
     @Override
     public String toString() {
-        return super.toString() + toString(sequence, var, transformation);
+        return super.toString(); // + toString(sequence, var, transformation);
     }
 }

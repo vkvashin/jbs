@@ -60,6 +60,6 @@ public final class BinaryOpExpr extends Expr {
 
     @Override
     public String toString() {
-        return super.toString() + opKind.id + ' ' + toString(left, right);
+        return super.toString() + opKind.id; // + ' ' + toString(left, right);
     }
 }

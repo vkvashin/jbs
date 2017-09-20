@@ -43,6 +43,6 @@ public final class  ReduceExpr extends Expr {
 
     @Override
     public String toString() {
-        return super.toString() + toString(defValue, prev, curr, transformation);
+        return super.toString(); // + toString(defValue, prev, curr, transformation);
     }
 }
