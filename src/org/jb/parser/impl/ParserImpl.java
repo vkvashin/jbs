@@ -73,9 +73,7 @@ public class ParserImpl {
     }
 
     private DeclStatement declStatement() throws SynaxError {
-        final Token firstTok = LA(0);
-        assert firstTok.getKind() == Token.Kind.VAR;
-        consume(); // var
+        final Token firstTok = consumeExpected(Token.Kind.VAR);
         final Token nameTok = LA(0);
         consume(); // variable name
         if (nameTok == null || nameTok.getKind() != Token.Kind.ID) {
@@ -90,9 +88,7 @@ public class ParserImpl {
     }
 
     private PrintStatement printStatement() throws SynaxError {
-        final Token firstTok = LA(0);
-        assert firstTok.getKind() == Token.Kind.PRINT;
-        consume(); // print
+        final Token firstTok = consumeExpected(Token.Kind.PRINT);
         final Token stringTok = LA(0);
         consume(); // string
         if (stringTok.getKind() != Token.Kind.STRING) {
@@ -103,9 +99,7 @@ public class ParserImpl {
     }
 
     private OutStatement outStatement() throws SynaxError {
-        final Token firstTok = LA(0);
-        assert firstTok.getKind() == Token.Kind.OUT;
-        consume(); // out
+        final Token firstTok = consumeExpected(Token.Kind.OUT);
         Expr expr = expression();
         return new OutStatement(firstTok.getLine(), firstTok.getColumn(), expr);
     }
@@ -215,23 +209,78 @@ public class ParserImpl {
     }
 
     private ParenExpr paren() throws SynaxError {
-        //throw new UnsupportedOperationException("not supported yet");
-        return null;
+        final Token firstTok = consumeExpected(Token.Kind.LPAREN);
+        Expr expr = expression();
+        consumeExpected(Token.Kind.RPAREN);
+        return new ParenExpr(firstTok.getLine(), firstTok.getColumn(), expr);
     }
 
     private SeqExpr seq() throws SynaxError {
-        //throw new UnsupportedOperationException("not supported yet");
-        return null;
+        final Token firstTok = consumeExpected(Token.Kind.LCURLY);
+        Expr first = expression();
+        consumeExpected(Token.Kind.COMMA);
+        Expr last = expression();
+        consumeExpected(Token.Kind.RCURLY);
+        return new SeqExpr(firstTok.getLine(), firstTok.getColumn(), first, last);
     }
 
     private MapExpr map() throws SynaxError {
-        //throw new UnsupportedOperationException("not supported yet");
-        return null;
+        final Token firstTok = consumeExpected(Token.Kind.MAP);
+        consumeExpected(Token.Kind.LPAREN);
+        Expr sequence = expression();
+        consumeExpected(Token.Kind.COMMA);
+        IdExpr var = id();
+        consumeExpected(Token.Kind.ARROW);
+        Expr transformation = expression();
+        consumeExpected(Token.Kind.RPAREN);
+        return new MapExpr(firstTok.getLine(), firstTok.getColumn(), sequence, var, transformation);
     }
 
     private ReduceExpr reduce() throws SynaxError {
-        //throw new UnsupportedOperationException("not supported yet");
-        return null;
+        final Token firstTok = consumeExpected(Token.Kind.REDUCE);
+        consumeExpected(Token.Kind.LPAREN);
+        Expr sequence = expression();
+        consumeExpected(Token.Kind.COMMA);
+        Expr defValue = expression();
+        consumeExpected(Token.Kind.COMMA);
+        IdExpr prev = id();
+        IdExpr curr = id();
+        consumeExpected(Token.Kind.ARROW);
+        Expr transformation = expression();
+        consumeExpected(Token.Kind.RPAREN);
+        return new ReduceExpr(firstTok.getLine(), firstTok.getColumn(), sequence, defValue, prev, curr, transformation);
+    }
+
+    /**
+     * Checks that LA(0) is of the given kind and consumes it; otherwise throws SynaxError
+     * @return consumed token
+     */
+    private Token consumeExpected(Token.Kind kind) throws SynaxError {
+        Token tok = LA(0);
+        if (tok == null || tok.getKind() != kind) {
+            throw new SynaxError(tok, "expected " + getTokenKindName(kind));
+        }
+        consume();
+        return tok;
+    }
+
+    private String getTokenKindName(Token.Kind kind) {
+        if (kind.isFixedText()) {
+            return kind.getFixedText();
+        }
+        switch (kind) {
+            case INT:
+                return "integer";
+            case FLOAT:
+                return "float";
+            case STRING:
+                return "string";
+            case ID:
+                return "identifier";
+            default:
+                assert false : "unexpected token kind: " + kind;
+                return kind.toString();
+        }
     }
 
     /** just a conveniency shortcut */

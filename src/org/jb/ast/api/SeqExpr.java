@@ -14,10 +14,10 @@ public final class SeqExpr extends Expr {
     private final Expr first;
     private final Expr last;
 
-    public SeqExpr(int line, int column, Expr left, Expr right) {
+    public SeqExpr(int line, int column, Expr first, Expr last) {
         super(line, column);
-        this.first = left;
-        this.last = right;
+        this.first = first;
+        this.last = last;
         this.first.setNextSibling(this.last);
         this.last.setNextSibling(null);
     }

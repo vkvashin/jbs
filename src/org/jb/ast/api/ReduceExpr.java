@@ -12,12 +12,12 @@ package org.jb.ast.api;
 public final class  ReduceExpr extends Expr {
 
     private final Expr sequence;
-    private final IdExpr defValue;
+    private final Expr defValue;
     private final IdExpr prev;
     private final IdExpr curr;
     private final Expr transformation;
 
-    public ReduceExpr(int line, int column, Expr sequence, IdExpr defValue, IdExpr prev, IdExpr curr, Expr transformation) {
+    public ReduceExpr(int line, int column, Expr sequence, Expr defValue, IdExpr prev, IdExpr curr, Expr transformation) {
         super(line, column);
         this.sequence = sequence;
         this.defValue = defValue;

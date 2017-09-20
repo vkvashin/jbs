@@ -103,16 +103,53 @@ public class ParserSimpleTest extends ParserTestBase {
 
     @Test
     public void testParserFromTZ() throws Exception {
-        String text = 
+        String source =
             "var n = 500\n" +
             "var sequence = map({0, n}, i -> (-1)^i / (2.0 * i + 1))\n" +
             "var pi = 4 * reduce(sequence, 0, x y -> x + y)\n" +
             "print \"pi = \"\n" +
             "out pi";
-        TokenStream ts = lex(text);
-        //printTokens(ts);
-        //ts = lex(text);
-        ASTNode ast = new Parser().parse(ts);
-        printAst(ast);
+        String[] expected = new String[] {
+            "DECL [1:1] n",
+            "    INT [1:9] 500",
+            "DECL [2:1] sequence",
+            "    MAP [2:16] ",
+            "        SEQ [2:20] ",
+            "            INT [2:21] 0",
+            "            ID [2:24] n",
+            "        ID [2:28] i",
+            "        OP [2:33] ^",
+            "            PAREN [2:33] ",
+            "                INT [2:34] -1",
+            "            OP [2:38] /",
+            "                ID [2:38] i",
+            "                PAREN [2:42] ",
+            "                    OP [2:43] *",
+            "                        FLOAT [2:43] 2.0",
+            "                        OP [2:49] +",
+            "                            ID [2:49] i",
+            "                            INT [2:53] 1",
+            "DECL [3:1] pi",
+            "    OP [3:10] *",
+            "        INT [3:10] 4",
+            "        MAP [3:14] ",
+            "            ID [3:21] sequence",
+            "            INT [3:31] 0",
+            "            ID [3:34] x",
+            "            ID [3:36] y",
+            "            OP [3:41] +",
+            "                ID [3:41] x",
+            "                ID [3:45] y",
+            "PRINT [4:1] ",
+            "    STRING [4:7] pi = ",
+            "OUT [5:1] ",
+            "    ID [5:5] pi"
+        };
+        doTestAST(source, expected);
+//        TokenStream ts = lex(source);
+//        //printTokens(ts);
+//        //ts = lex(text);
+//        ASTNode ast = new Parser().parse(ts);
+//        printAst(ast);
     }
 }
