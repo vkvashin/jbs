@@ -9,20 +9,20 @@ package org.jb.ast.api;
  *
  * @author vkvashin
  */
-public abstract class Satement extends JbNode {
+public abstract class Statement extends JbNode {
     
-    private Satement nextStatement;
+    private Statement nextStatement;
 
-    protected Satement(int line, int column) {
+    protected Statement(int line, int column) {
         super(line, column);
     }
 
     @Override
-    public Satement getNextSibling() {
+    public Statement getNextSibling() {
         return nextStatement;
     }
 
-    public void setNextSibling(Satement nextSatement) {
+    public void setNextSibling(Statement nextSatement) {
         this.nextStatement = nextSatement;
     }
 }

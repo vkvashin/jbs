@@ -9,7 +9,7 @@ package org.jb.ast.api;
  *
  * @author vkvashin
  */
-public final class PrintStatement extends Satement {
+public final class PrintStatement extends Statement {
 
     private final StringLiteral string;
 

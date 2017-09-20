@@ -9,7 +9,7 @@ package org.jb.ast.api;
  *
  * @author vkvashin
  */
-public final class OutStatement extends Satement {
+public final class OutStatement extends Statement {
 
     private final Expr expr;
     

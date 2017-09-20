@@ -9,7 +9,7 @@ package org.jb.ast.api;
  *
  * @author vkvashin
  */
-public final class DeclStatement extends Satement {
+public final class DeclStatement extends Statement {
 
     private final String name;
     private final Expr initializer;
