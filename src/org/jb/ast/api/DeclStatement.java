@@ -37,4 +37,9 @@ public final class DeclStatement extends Statement {
     public Expr getInitializer() {
         return initializer;
     }
+
+    @Override
+    public String toString() {
+        return super.toString() + name;
+    }
 }

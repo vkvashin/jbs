@@ -76,6 +76,7 @@ public class ParserSimpleTest extends ParserTestBase {
                 "var x = 500\n" +
                 "var y = 3.14\n" +
                 "var z = \"qwe\"\n" +
+                "var w = x + 1\n" +
                 "print \"x = \"\n" +
                 "out x\n";
         TokenStream ts = lex(text);

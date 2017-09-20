@@ -1,10 +1,6 @@
 package org.jb.parser.impl;
 
-import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.jb.ast.api.DeclStatement;
-import org.jb.ast.api.ASTNode;
 import org.jb.ast.api.*;
 import org.jb.lexer.api.*;
 import org.jb.parser.api.*;
@@ -121,24 +117,73 @@ public class ParserImpl {
         }
         switch (firstTok.getKind()) {
             case INT:
-                return intLiteral();
+                return tryOperation(intLiteral());
             case FLOAT:
-                return floatLiteral();
+                return tryOperation(floatLiteral());
             case STRING:
                 return stringLiteral();
             case ID:
-                return id();
+                return tryOperation(id());
             case LPAREN:
-                return paren();
+                return tryOperation(paren());
             case LCURLY:
                 return seq();
             case MAP:
                 return map();
             case REDUCE:
-                return reduce();
+                return tryOperation(reduce());
             default:
                 throw new SynaxError(firstTok, "unexpected token: expected expression");
         }
+    }
+
+    private Expr tryOperation(Expr expr) throws SynaxError {
+        // expression is already consumed
+        if (isOperation(LA(0))) {
+            return operation(expr);
+        }
+        return expr;
+    }
+
+    private boolean isOperation(Token tok) {
+        if (tok != null) {
+            switch (tok.getKind()) {
+                case ADD:
+                case SUB:
+                case DIV:
+                case MUL:
+                case POW:
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    private BinaryOpExpr.OpKind getOpKind(Token tok) {
+        switch (tok.getKind()) {
+            case ADD:
+                return BinaryOpExpr.OpKind.ADD;
+            case SUB:
+                return BinaryOpExpr.OpKind.SUB;
+            case DIV:
+                return BinaryOpExpr.OpKind.DIV;
+            case MUL:
+                return BinaryOpExpr.OpKind.MUL;
+            case POW:
+                return BinaryOpExpr.OpKind.POW;
+            default:
+                assert false : "should be an operation: " + tok;
+                return null;
+        }
+    }
+
+    private BinaryOpExpr operation(Expr left) throws SynaxError {
+        Token opTok = LA(0);
+        assert isOperation(opTok);
+        consume();
+        Expr right = expression();
+        BinaryOpExpr.OpKind opKind = getOpKind(opTok);
+        return new BinaryOpExpr(left.getLine(), left.getColumn(), opKind, left, right);
     }
 
     private IntLiteral intLiteral() throws SynaxError {
@@ -163,8 +208,10 @@ public class ParserImpl {
     }
 
     private IdExpr id() throws SynaxError {
-        //throw new UnsupportedOperationException("not supported yet");
-        return null;
+        final Token tok = LA(0);
+        assert tok.getKind() == Token.Kind.ID;
+        consume();
+        return new IdExpr(tok.getText(), tok.getLine(), tok.getColumn());
     }
 
     private ParenExpr paren() throws SynaxError {
