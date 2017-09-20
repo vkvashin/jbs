@@ -5,9 +5,12 @@
  */
 package org.jb.parser.api;
 
+import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import org.jb.ast.api.ASTNode;
 import org.jb.lexer.api.LexerTestBase;
+import org.jb.lexer.api.TokenStream;
+import static org.junit.Assert.assertTrue;
 
 /**
  *
@@ -63,6 +66,77 @@ public class ParserTestBase extends LexerTestBase {
     }
 
     protected void printAst(ASTNode ast) {
-        new AstPrinter(System.out).printAst(ast);
+        printAst(ast, System.out);
+    }
+
+    protected void printAst(ASTNode ast, PrintStream ps) {
+        new AstPrinter(ps).printAst(ast);
+    }
+
+    protected CharSequence getAstDump(ASTNode ast) {
+        StringPrintStream ps = new StringPrintStream();
+        new AstPrinter(ps).printAst(ast);
+        return ps;
+    }
+
+    protected String[] getAstDumpLines(ASTNode ast) {
+        StringPrintStream ps = new StringPrintStream();
+        new AstPrinter(ps).printAst(ast);
+        return ps.toString().split("\n");
+    }
+
+    protected void doTestAST(String source, String[] expected) throws Exception {
+        TokenStream ts = lex(source);
+        ASTNode ast = new Parser().parse(ts);
+        //printAst(ast);
+        String[] actual = getAstDumpLines(ast);
+        assertEquals("AST dump differs", expected, actual);
+    }
+
+    protected void assertEquals(String message, String[] expected, String[] actual) {
+        for (int i = 0; i < expected.length; i++) {
+            if (i < actual.length) {
+                if (!expected[i].equals(actual[i])) {
+                    assertTrue(message + ": line " + i + " differs: expected vs actual is\n" + expected[i] + "\n" + actual[i], false);
+                }
+            } else {
+                assertTrue(message + " premature end of output", false);
+            }
+        }
+        if (expected.length < actual.length) {
+            assertTrue(message + " actual output is longer by " + (actual.length - expected.length) + " lines", false);
+        }
+    }
+
+    private static class StringPrintStream extends PrintStream implements CharSequence {
+
+        private ByteArrayOutputStream os;
+
+        public StringPrintStream() {
+            this(new ByteArrayOutputStream());
+        }
+
+        private StringPrintStream(ByteArrayOutputStream arr) {
+            super(arr);
+            os = arr;
+        }
+
+        public int length() {
+            return toString().length();
+        }
+
+        public char charAt(int index) {
+            return toString().charAt(index);
+        }
+
+        public CharSequence subSequence(int start, int end) {
+            return toString().subSequence(start, end);
+        }
+
+        @Override
+        public String toString() {
+            return os.toString();
+        }
     }
 }
+

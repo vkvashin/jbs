@@ -5,6 +5,9 @@
  */
 package org.jb.parser.api;
 
+import java.io.File;
+import java.io.PrintStream;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import org.jb.ast.api.ASTNode;
 import org.jb.lexer.api.Token;
@@ -72,23 +75,35 @@ public class ParserSimpleTest extends ParserTestBase {
 
     @Test
     public void testParserSimplest() throws Exception {
-        String text = 
+        String source =
                 "var x = 500\n" +
                 "var y = 3.14\n" +
                 "var z = \"qwe\"\n" +
                 "var w = x + 1\n" +
                 "print \"x = \"\n" +
                 "out x\n";
-        TokenStream ts = lex(text);
-        //printTokens(ts);
-        //ts = lex(text);
-        ASTNode ast = new Parser().parse(ts);
-        printAst(ast);
+        String[] expected = new String[] {
+            "DECL [1:1] x",
+            "    INT [1:9] 500",
+            "DECL [2:1] y",
+            "    FLOAT [2:9] 3.14",
+            "DECL [3:1] z",
+            "    STRING [3:9] qwe",
+            "DECL [4:1] w",
+            "    OP [4:9] +",
+            "        ID [4:9] x",
+            "        INT [4:13] 1",
+            "PRINT [5:1] ",
+            "    STRING [5:7] x = ",
+            "OUT [6:1] ",
+            "    ID [6:5] x"
+        };
+        doTestAST(source, expected);
     }
 
     @Test
     public void testParserFromTZ() throws Exception {
-        String text = "\n" +
+        String text = 
             "var n = 500\n" +
             "var sequence = map({0, n}, i -> (-1)^i / (2.0 * i + 1))\n" +
             "var pi = 4 * reduce(sequence, 0, x y -> x + y)\n" +

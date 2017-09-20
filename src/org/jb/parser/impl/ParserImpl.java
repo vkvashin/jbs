@@ -77,10 +77,10 @@ public class ParserImpl {
         assert firstTok.getKind() == Token.Kind.VAR;
         consume(); // var
         final Token nameTok = LA(0);
+        consume(); // variable name
         if (nameTok == null || nameTok.getKind() != Token.Kind.ID) {
             throw new SynaxError(LA(0), "var keyword should be followed by name");
         }
-        consume(); // variable name
         if (LA(0).getKind() != Token.Kind.EQ) {
             throw new SynaxError(LA(0), "variable name should be followed by = sign");
         }
