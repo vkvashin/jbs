@@ -98,6 +98,7 @@ public class ParserImpl {
         assert firstTok.getKind() == Token.Kind.PRINT;
         consume(); // print
         final Token stringTok = LA(0);
+        consume(); // string
         if (stringTok.getKind() != Token.Kind.STRING) {
             throw new SynaxError(LA(0), "print keyword should be followed by a string");
         }
