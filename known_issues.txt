@@ -14,6 +14,11 @@ Line endings
 
 StringBufferInputStream in test
 
+Error processing in Lexer:
+1) JbTokenStreamException should contain line and col
+2) distinguish fatal errors (IO, etc) and syntax
+
+Lexer: consider EOF token
 
 Parser
 ------

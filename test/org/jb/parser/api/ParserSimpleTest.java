@@ -71,7 +71,22 @@ public class ParserSimpleTest extends ParserTestBase {
     }
 
     @Test
-    public void testFromTZ() throws Exception {
+    public void testParserSimplest() throws Exception {
+        String text = 
+                "var x = 500\n" +
+                "var y = 3.14\n" +
+                "var z = \"qwe\"\n" +
+                "print \"x = \"\n" +
+                "out x\n";
+        JbTokenStream ts = lex(text);
+        //printTokens(ts);
+        //ts = lex(text);
+        JbNode ast = new Parser().parse(ts);
+        printAst(ast);
+    }
+
+    @Test
+    public void testParserFromTZ() throws Exception {
         String text = "\n" +
             "var n = 500\n" +
             "var sequence = map({0, n}, i -> (-1)^i / (2.0 * i + 1))\n" +
@@ -81,7 +96,7 @@ public class ParserSimpleTest extends ParserTestBase {
         JbTokenStream ts = lex(text);
         //printTokens(ts);
         //ts = lex(text);
-        JbNode ast = new JbParser().parse(ts);
+        JbNode ast = new Parser().parse(ts);
         printAst(ast);
     }
 }

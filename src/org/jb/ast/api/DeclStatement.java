@@ -11,10 +11,10 @@ package org.jb.ast.api;
  */
 public final class DeclStatement extends Statement {
 
-    private final String name;
+    private final CharSequence name;
     private final Expr initializer;
             
-    public DeclStatement(int line, int column, String name, Expr initExpr) {
+    public DeclStatement(int line, int column, CharSequence name, Expr initExpr) {
         super(line, column);
         this.name = name;
         this.initializer = initExpr;
@@ -30,7 +30,7 @@ public final class DeclStatement extends Statement {
         return initializer;
     }
 
-    public String getName() {
+    public CharSequence getName() {
         return name;
     }
 

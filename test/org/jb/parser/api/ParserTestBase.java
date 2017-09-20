@@ -47,6 +47,12 @@ public class ParserTestBase extends LexerTestBase {
         public void printAst(JbNode ast) {
             while (ast != null) {
                 ps.append(indentBuffer).append(toString(ast)).append('\n');
+                JbNode firstChild = ast.getFirstChild();
+                if (firstChild != null) {
+                    indent();
+                    printAst(firstChild);
+                    unindent();
+                }
                 ast = ast.getNextSibling();
             }
         }
