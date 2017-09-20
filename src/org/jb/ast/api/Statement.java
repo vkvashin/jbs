@@ -9,7 +9,7 @@ package org.jb.ast.api;
  *
  * @author vkvashin
  */
-public abstract class Statement extends JbNode {
+public abstract class Statement extends ASTNode {
     
     private Statement nextStatement;
 

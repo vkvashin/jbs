@@ -6,7 +6,7 @@
 package org.jb.parser.api;
 
 import java.io.PrintStream;
-import org.jb.ast.api.JbNode;
+import org.jb.ast.api.ASTNode;
 import org.jb.lexer.api.LexerTestBase;
 
 /**
@@ -44,10 +44,10 @@ public class ParserTestBase extends LexerTestBase {
             }
         }
 
-        public void printAst(JbNode ast) {
+        public void printAst(ASTNode ast) {
             while (ast != null) {
                 ps.append(indentBuffer).append(toString(ast)).append('\n');
-                JbNode firstChild = ast.getFirstChild();
+                ASTNode firstChild = ast.getFirstChild();
                 if (firstChild != null) {
                     indent();
                     printAst(firstChild);
@@ -57,12 +57,12 @@ public class ParserTestBase extends LexerTestBase {
             }
         }
 
-        private CharSequence toString(JbNode ast) {
+        private CharSequence toString(ASTNode ast) {
             return ast.toString();
         }
     }
 
-    protected void printAst(JbNode ast) {
+    protected void printAst(ASTNode ast) {
         new AstPrinter(System.out).printAst(ast);
     }
 }

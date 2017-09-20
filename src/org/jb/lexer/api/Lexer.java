@@ -7,16 +7,16 @@ import org.jb.lexer.impl.LexerImpl;
  * Lexes the given input stream and returns token sequence.
  * @author vkvashin
  */
-public final class JbLexer {
+public final class Lexer {
     
     private final LexerImpl lexer;
     
-    public JbLexer(InputStream is) {
+    public Lexer(InputStream is) {
         lexer = new LexerImpl(is);
     }
     
     /** Lex the input stream and return token sequence. */
-    public JbTokenStream lex() {
+    public TokenStream lex() {
         return lexer.lex();
     }
 }

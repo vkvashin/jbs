@@ -33,7 +33,7 @@ public final class  ReduceExpr extends Expr {
     }
 
     @Override
-    public JbNode getFirstChild() {
+    public ASTNode getFirstChild() {
         return sequence;
     }
 

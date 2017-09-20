@@ -2,9 +2,9 @@ package org.jb.lexer.impl;
 
 import java.io.IOException;
 import java.io.InputStream;
-import org.jb.lexer.api.JbToken;
-import org.jb.lexer.api.JbTokenStream;
-import org.jb.lexer.api.JbTokenStreamException;
+import org.jb.lexer.api.Token;
+import org.jb.lexer.api.TokenStreamException;
+import org.jb.lexer.api.TokenStream;
 
 /**
  * Lexer implementation
@@ -18,7 +18,7 @@ public class LexerImpl {
         this.is = new InputStreamWrapper(is);
     }
 
-    public JbTokenStream lex() {
+    public TokenStream lex() {
         return new TokenStreamImpl();
     }
     
@@ -73,19 +73,19 @@ public class LexerImpl {
         }
     }
     
-    private class TokenStreamImpl implements JbTokenStream {
+    private class TokenStreamImpl implements TokenStream {
         
 
         @Override
-        public JbToken next() throws JbTokenStreamException {            
+        public Token next() throws TokenStreamException {            
             try {
                 return nextImpl();
             } catch (IOException ex) {
-                throw new JbTokenStreamException(ex);
+                throw new TokenStreamException(ex);
             }
         }
         
-        private JbToken nextImpl() throws IOException, JbTokenStreamException {            
+        private Token nextImpl() throws IOException, TokenStreamException {            
             char c;
             // skip whitespaces
             while (true) {
@@ -122,62 +122,62 @@ public class LexerImpl {
                 case '"':
                     return readString();
                 case '(':
-                    return JbToken.createFixed(JbToken.Kind.LPAREN, is.getLine(), is.getColumn());
+                    return Token.createFixed(Token.Kind.LPAREN, is.getLine(), is.getColumn());
                 case ')':
-                    return JbToken.createFixed(JbToken.Kind.RPAREN, is.getLine(), is.getColumn());
+                    return Token.createFixed(Token.Kind.RPAREN, is.getLine(), is.getColumn());
                 case '{':
-                    return JbToken.createFixed(JbToken.Kind.LCURLY, is.getLine(), is.getColumn());
+                    return Token.createFixed(Token.Kind.LCURLY, is.getLine(), is.getColumn());
                 case '}':
-                    return JbToken.createFixed(JbToken.Kind.RCURLY, is.getLine(), is.getColumn());
+                    return Token.createFixed(Token.Kind.RCURLY, is.getLine(), is.getColumn());
                 case ',':
-                    return JbToken.createFixed(JbToken.Kind.COMMA, is.getLine(), is.getColumn());
+                    return Token.createFixed(Token.Kind.COMMA, is.getLine(), is.getColumn());
                 case '=':
-                    return JbToken.createFixed(JbToken.Kind.EQ, is.getLine(), is.getColumn());
+                    return Token.createFixed(Token.Kind.EQ, is.getLine(), is.getColumn());
                 default:
                     return readIdVarOrFunction(c);
             }
         }
 
-        private JbToken readNumber(char c) throws IOException, JbTokenStreamException {
+        private Token readNumber(char c) throws IOException, TokenStreamException {
             int line = is.getLine();
             int col = is.getColumn();
             StringBuilder sb = new StringBuilder().append(c);
-            JbToken.Kind kind = JbToken.Kind.INT;
+            Token.Kind kind = Token.Kind.INT;
             while (true) {
                 c = is.read();
                 if (Character.isDigit(c)) {
                     sb.append(c);
                 } else if(c == '.') {
-                    if (kind == JbToken.Kind.INT) {
-                        kind = JbToken.Kind.FLOAT;
+                    if (kind == Token.Kind.INT) {
+                        kind = Token.Kind.FLOAT;
                         sb.append(c);
                     } else {
-                        throw new JbTokenStreamException("Syntax error: two digital points at " + is.getLine() + ':' + is.getColumn());
+                        throw new TokenStreamException("Syntax error: two digital points at " + is.getLine() + ':' + is.getColumn());
                     }
                 } else {
                     is.unread(c);
                     break;
                 }
             }            
-            return JbToken.create(kind, sb, line, col);
+            return Token.create(kind, sb, line, col);
         }
 
-        private JbToken readString() throws IOException, JbTokenStreamException {
+        private Token readString() throws IOException, TokenStreamException {
             int line = is.getLine();
             int col = is.getColumn();
             StringBuilder sb = new StringBuilder();
             for(char c = is.read(); c != '"'; c = is.read()) {
                 if (c == 0) {
-                    throw new JbTokenStreamException("Syntax error: unterminated string at " + is.getLine() + ':' + is.getColumn());
+                    throw new TokenStreamException("Syntax error: unterminated string at " + is.getLine() + ':' + is.getColumn());
                 }
                 sb.append(c);
             }
-            return JbToken.create(JbToken.Kind.STRING, sb, line, col);
+            return Token.create(Token.Kind.STRING, sb, line, col);
         }
 
-        private JbToken readIdVarOrFunction(char c) throws JbTokenStreamException, IOException {
+        private Token readIdVarOrFunction(char c) throws TokenStreamException, IOException {
             if (!Character.isJavaIdentifierStart(c)) {
-                throw new JbTokenStreamException("Syntax error: unexpected character '" + c + "' at " + is.getLine() + ':' + is.getColumn());
+                throw new TokenStreamException("Syntax error: unexpected character '" + c + "' at " + is.getLine() + ':' + is.getColumn());
             }
             StringBuilder sb = new StringBuilder().append(c);
             int line = is.getLine();
@@ -186,53 +186,53 @@ public class LexerImpl {
                 sb.append(c);
             }
             is.unread(c);
-            for (JbToken.Kind kind : new JbToken.Kind[] {JbToken.Kind.MAP, JbToken.Kind.REDUCE, JbToken.Kind.PRINT, JbToken.Kind.OUT, JbToken.Kind.VAR}) {
+            for (Token.Kind kind : new Token.Kind[] {Token.Kind.MAP, Token.Kind.REDUCE, Token.Kind.PRINT, Token.Kind.OUT, Token.Kind.VAR}) {
                 assert kind.isFixedText();
                 if (kind.getFixedText().contentEquals(sb)) {
-                    return JbToken.createFixed(kind, line, col);
+                    return Token.createFixed(kind, line, col);
                 }
             }
-            return JbToken.create(JbToken.Kind.ID, sb, line, col);
+            return Token.create(Token.Kind.ID, sb, line, col);
         }
 
-        private JbToken readNumberOrOp(char c) throws IOException, JbTokenStreamException {
+        private Token readNumberOrOp(char c) throws IOException, TokenStreamException {
             assert c == '+';
             c = is.read();
             if (c == 0) {
-                return JbToken.createFixed(JbToken.Kind.ADD, is.getLine(), is.getColumn());
+                return Token.createFixed(Token.Kind.ADD, is.getLine(), is.getColumn());
             } else if(Character.isDigit(c)) {
                 is.unread(c);
                 return readNumber('+');
             } else {
                 is.unread(c);
-                return JbToken.createFixed(JbToken.Kind.ADD, is.getLine(), is.getColumn());
+                return Token.createFixed(Token.Kind.ADD, is.getLine(), is.getColumn());
             }            
         }
 
-        private JbToken readOp(char c) {
+        private Token readOp(char c) {
             switch (c) {
-                case '+':   return JbToken.createFixed(JbToken.Kind.ADD, is.getLine(), is.getColumn());
-                case '-':   return JbToken.createFixed(JbToken.Kind.SUB, is.getLine(), is.getColumn());
-                case '*':   return JbToken.createFixed(JbToken.Kind.MUL, is.getLine(), is.getColumn());
-                case '/':   return JbToken.createFixed(JbToken.Kind.DIV, is.getLine(), is.getColumn());
-                case '^':   return JbToken.createFixed(JbToken.Kind.POW, is.getLine(), is.getColumn());
+                case '+':   return Token.createFixed(Token.Kind.ADD, is.getLine(), is.getColumn());
+                case '-':   return Token.createFixed(Token.Kind.SUB, is.getLine(), is.getColumn());
+                case '*':   return Token.createFixed(Token.Kind.MUL, is.getLine(), is.getColumn());
+                case '/':   return Token.createFixed(Token.Kind.DIV, is.getLine(), is.getColumn());
+                case '^':   return Token.createFixed(Token.Kind.POW, is.getLine(), is.getColumn());
                 default:    throw new IllegalArgumentException("Unexpected readOp('" + c + "')");
             }
         }
 
-        private JbToken readArrowOpOrNumber(char c) throws IOException, JbTokenStreamException {
+        private Token readArrowOpOrNumber(char c) throws IOException, TokenStreamException {
             assert c == '-';
             c = is.read();
             if (c == 0) {
-                return JbToken.createFixed(JbToken.Kind.SUB, is.getLine(), is.getColumn());
+                return Token.createFixed(Token.Kind.SUB, is.getLine(), is.getColumn());
             } else if (c == '>') {
-                return JbToken.createFixed(JbToken.Kind.ARROW, is.getLine(), is.getColumn() - 1);
+                return Token.createFixed(Token.Kind.ARROW, is.getLine(), is.getColumn() - 1);
             } else if(Character.isDigit(c)) {
                 is.unread(c);
                 return readNumber('-');
             } else {
                 is.unread(c);
-                return JbToken.createFixed(JbToken.Kind.SUB, is.getLine(), is.getColumn());
+                return Token.createFixed(Token.Kind.SUB, is.getLine(), is.getColumn());
             }            
         }
     }

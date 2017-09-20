@@ -9,7 +9,7 @@ package org.jb.ast.api;
  *
  * @author vkvashin
  */
-public abstract class Expr extends JbNode {
+public abstract class Expr extends ASTNode {
 
     private Expr nextExpr;
 
@@ -22,7 +22,7 @@ public abstract class Expr extends JbNode {
     }
 
     @Override
-    public final JbNode getNextSibling() {
+    public final ASTNode getNextSibling() {
         return nextExpr;
     }
 

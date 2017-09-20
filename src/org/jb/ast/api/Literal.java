@@ -19,7 +19,7 @@ public abstract class Literal extends Expr {
     }    
 
     @Override
-    public final JbNode getFirstChild() {
+    public final ASTNode getFirstChild() {
         return null;
     }
 

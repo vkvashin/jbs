@@ -5,9 +5,9 @@
  */
 package org.jb.parser.impl;
 
-import org.jb.lexer.api.JbToken;
-import org.jb.lexer.api.JbTokenStream;
-import org.jb.lexer.api.JbTokenStreamException;
+import org.jb.lexer.api.Token;
+import org.jb.lexer.api.TokenStreamException;
+import org.jb.lexer.api.TokenStream;
 
 /**
  *
@@ -21,14 +21,14 @@ public abstract class TokenBuffer {
         this.maxLA = maxLA;
     }
 
-    public final JbToken LA(int lookAhead) throws JbTokenStreamException {
+    public final Token LA(int lookAhead) throws TokenStreamException {
         if (lookAhead > maxLA) {
-            throw new JbTokenStreamException("Max lookahead exceeded: " + lookAhead + " while max=" + maxLA);
+            throw new TokenStreamException("Max lookahead exceeded: " + lookAhead + " while max=" + maxLA);
         }
         return LAImpl(lookAhead);
     }
 
-    public abstract JbToken LAImpl(int lookAhead) throws JbTokenStreamException;
+    public abstract Token LAImpl(int lookAhead) throws TokenStreamException;
 
     public abstract void consume();
 }

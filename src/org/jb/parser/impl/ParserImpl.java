@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jb.ast.api.DeclStatement;
-import org.jb.ast.api.JbNode;
+import org.jb.ast.api.ASTNode;
 import org.jb.ast.api.*;
 import org.jb.lexer.api.*;
 import org.jb.parser.api.*;
@@ -18,7 +18,7 @@ public class ParserImpl {
     private final TokenBuffer tokens;
     private final ParseErrorListener errorListener;
 
-    public ParserImpl(JbTokenStream ts, ParseErrorListener errorListener) throws JbTokenStreamException {
+    public ParserImpl(TokenStream ts, ParseErrorListener errorListener) throws TokenStreamException {
         tokens = new WindowTokenBuffer(ts, 1, 4096);
         this.errorListener = errorListener;
     }
@@ -38,7 +38,7 @@ public class ParserImpl {
     }
 
     private void skipToTheNextLine() {
-        JbToken tok = LA(0);
+        Token tok = LA(0);
         if (tok != null) {
             int line = tok.getLine();
             while (tok != null && tok.getLine() == line) {
@@ -60,7 +60,7 @@ public class ParserImpl {
     }
 
     private Statement statementImpl() throws SynaxError {
-        JbToken tok = LA(0);
+        Token tok = LA(0);
         if (tok == null) {
             return null; // TODO: consider a special EOF token
         }
@@ -77,15 +77,15 @@ public class ParserImpl {
     }
 
     private DeclStatement declStatement() throws SynaxError {
-        final JbToken firstTok = LA(0);
-        assert firstTok.getKind() == JbToken.Kind.VAR;
+        final Token firstTok = LA(0);
+        assert firstTok.getKind() == Token.Kind.VAR;
         consume(); // var
-        final JbToken nameTok = LA(0);
-        if (nameTok == null || nameTok.getKind() != JbToken.Kind.ID) {
+        final Token nameTok = LA(0);
+        if (nameTok == null || nameTok.getKind() != Token.Kind.ID) {
             throw new SynaxError(LA(0), "var keyword should be followed by name");
         }
         consume(); // variable name
-        if (LA(0).getKind() != JbToken.Kind.EQ) {
+        if (LA(0).getKind() != Token.Kind.EQ) {
             throw new SynaxError(LA(0), "variable name should be followed by = sign");
         }
         consume();// =
@@ -94,11 +94,11 @@ public class ParserImpl {
     }
 
     private PrintStatement printStatement() throws SynaxError {
-        final JbToken firstTok = LA(0);
-        assert firstTok.getKind() == JbToken.Kind.PRINT;
+        final Token firstTok = LA(0);
+        assert firstTok.getKind() == Token.Kind.PRINT;
         consume(); // print
-        final JbToken stringTok = LA(0);
-        if (stringTok.getKind() != JbToken.Kind.STRING) {
+        final Token stringTok = LA(0);
+        if (stringTok.getKind() != Token.Kind.STRING) {
             throw new SynaxError(LA(0), "print keyword should be followed by a string");
         }
         StringLiteral sl = new StringLiteral(stringTok.getLine(), stringTok.getColumn(), stringTok.getText());
@@ -106,15 +106,15 @@ public class ParserImpl {
     }
 
     private OutStatement outStatement() throws SynaxError {
-        final JbToken firstTok = LA(0);
-        assert firstTok.getKind() == JbToken.Kind.OUT;
+        final Token firstTok = LA(0);
+        assert firstTok.getKind() == Token.Kind.OUT;
         consume(); // out
         Expr expr = expression();
         return new OutStatement(firstTok.getLine(), firstTok.getColumn(), expr);
     }
 
     private Expr expression() throws SynaxError {
-        final JbToken firstTok = LA(0);
+        final Token firstTok = LA(0);
         if (firstTok == null) {
             throw new SynaxError("unexpected end of file: expected expression");
         }
@@ -141,23 +141,23 @@ public class ParserImpl {
     }
 
     private IntLiteral intLiteral() throws SynaxError {
-        final JbToken tok = LA(0);
+        final Token tok = LA(0);
         consume();
-        assert tok.getKind() == JbToken.Kind.INT;
+        assert tok.getKind() == Token.Kind.INT;
         return new IntLiteral(tok.getLine(), tok.getColumn(), tok.getText());
     }
 
     private FloatLiteral floatLiteral() throws SynaxError {
-        final JbToken tok = LA(0);
+        final Token tok = LA(0);
         consume();
-        assert tok.getKind() == JbToken.Kind.FLOAT;
+        assert tok.getKind() == Token.Kind.FLOAT;
         return new FloatLiteral(tok.getLine(), tok.getColumn(), tok.getText());
     }
 
     private StringLiteral stringLiteral() throws SynaxError {
-        final JbToken tok = LA(0);
+        final Token tok = LA(0);
         consume();
-        assert tok.getKind() == JbToken.Kind.STRING;
+        assert tok.getKind() == Token.Kind.STRING;
         return new StringLiteral(tok.getLine(), tok.getColumn(), tok.getText());
     }
 
@@ -187,12 +187,12 @@ public class ParserImpl {
     }
 
     /** just a conveniency shortcut */
-    private JbToken LA(int lookAhead) {
+    private Token LA(int lookAhead) {
         // skip some erroneous tokens
         for (int i = 0; i < 10; i++) {
             try {
                 return tokens.LA(lookAhead);
-            } catch (JbTokenStreamException ex) {
+            } catch (TokenStreamException ex) {
                 tokens.consume();
                 errorListener.error(ex);
             }
@@ -208,7 +208,7 @@ public class ParserImpl {
     private boolean isEOF() {
         try {
             return tokens.LA(0) == null;
-        } catch (JbTokenStreamException ex) {
+        } catch (TokenStreamException ex) {
             return false;
         }
     }
@@ -217,10 +217,10 @@ public class ParserImpl {
         SynaxError(String message) {
             this(null, message);
         }
-        SynaxError(JbToken tok, String message) {
+        SynaxError(Token tok, String message) {
             super(composeMessage(tok, message));
         }
-        private static String composeMessage(JbToken tok, String message) {
+        private static String composeMessage(Token tok, String message) {
             if (tok == null) {
                 return "Syntax error: " + message;
             } else {

@@ -6,10 +6,9 @@
 package org.jb.parser.api;
 
 import java.util.ArrayList;
-import org.jb.ast.api.JbNode;
-import org.jb.lexer.api.JbToken;
-import org.jb.lexer.api.JbTokenStream;
-import org.jb.lexer.api.JbTokenStreamException;
+import org.jb.ast.api.ASTNode;
+import org.jb.lexer.api.Token;
+import org.jb.lexer.api.TokenStreamException;
 import org.jb.parser.impl.TokenBuffer;
 import org.jb.parser.impl.ArrayTokenBuffer;
 import org.jb.parser.impl.WindowTokenBuffer;
@@ -19,6 +18,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
+import org.jb.lexer.api.TokenStream;
 
 /**
  *
@@ -31,7 +31,7 @@ public class ParserSimpleTest extends ParserTestBase {
 
     @FunctionalInterface
     private interface TokenBufferFactory {
-        TokenBuffer create(JbTokenStream ts, int maxLA) throws JbTokenStreamException;
+        TokenBuffer create(TokenStream ts, int maxLA) throws TokenStreamException;
     }
 
     public void doTestTokenBuffer(TokenBufferFactory factory, int maxLA) throws Exception {
@@ -42,13 +42,13 @@ public class ParserSimpleTest extends ParserTestBase {
             "print \"pi = \"\n" +
             "out pi";
         
-        JbToken[] refTokens = lexAndGetTokenArray(text);
+        Token[] refTokens = lexAndGetTokenArray(text);
         TokenBuffer tb = factory.create(lex(text), maxLA);
         for (int base = 0; base < refTokens.length; base++) {
             for(int la = 0; la < maxLA; la++) {
                 int idx = base + la;
                 if (idx < refTokens.length) {
-                    JbToken tok = tb.LA(la);
+                    Token tok = tb.LA(la);
                     if (tok == null) {
                         tok = tb.LA(la);
                     }
@@ -61,13 +61,13 @@ public class ParserSimpleTest extends ParserTestBase {
 
     @Test
     public void testArrayTokenBuffer() throws Exception {
-        doTestTokenBuffer((JbTokenStream ts, int maxLA) -> new ArrayTokenBuffer(ts, maxLA), 2);
+        doTestTokenBuffer((TokenStream ts, int maxLA) -> new ArrayTokenBuffer(ts, maxLA), 2);
     }
 
     @Test
     public void testWindowTokenBuffer() throws Exception {
-        doTestTokenBuffer((JbTokenStream ts, int maxLA) -> new WindowTokenBuffer(ts, maxLA, 1024), 2);
-        doTestTokenBuffer((JbTokenStream ts, int maxLA) -> new WindowTokenBuffer(ts, maxLA, 3), 2);
+        doTestTokenBuffer((TokenStream ts, int maxLA) -> new WindowTokenBuffer(ts, maxLA, 1024), 2);
+        doTestTokenBuffer((TokenStream ts, int maxLA) -> new WindowTokenBuffer(ts, maxLA, 3), 2);
     }
 
     @Test
@@ -78,10 +78,10 @@ public class ParserSimpleTest extends ParserTestBase {
                 "var z = \"qwe\"\n" +
                 "print \"x = \"\n" +
                 "out x\n";
-        JbTokenStream ts = lex(text);
+        TokenStream ts = lex(text);
         //printTokens(ts);
         //ts = lex(text);
-        JbNode ast = new Parser().parse(ts);
+        ASTNode ast = new Parser().parse(ts);
         printAst(ast);
     }
 
@@ -93,10 +93,10 @@ public class ParserSimpleTest extends ParserTestBase {
             "var pi = 4 * reduce(sequence, 0, x y -> x + y)\n" +
             "print \"pi = \"\n" +
             "out pi";
-        JbTokenStream ts = lex(text);
+        TokenStream ts = lex(text);
         //printTokens(ts);
         //ts = lex(text);
-        JbNode ast = new Parser().parse(ts);
+        ASTNode ast = new Parser().parse(ts);
         printAst(ast);
     }
 }

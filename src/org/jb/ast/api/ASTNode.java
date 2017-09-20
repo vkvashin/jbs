@@ -4,7 +4,7 @@ package org.jb.ast.api;
  * Represents an AST node
  * @author vkvashin
  */
-public abstract class JbNode {
+public abstract class ASTNode {
     public enum NodeKind {
         // statements:
         DECL,
@@ -26,7 +26,7 @@ public abstract class JbNode {
     private final int line;
     private final int column;
 
-    protected JbNode(int line, int column) {
+    protected ASTNode(int line, int column) {
         this.line = line;
         this.column = column;
     }
@@ -40,8 +40,8 @@ public abstract class JbNode {
     }
     
     public abstract NodeKind getNodeKind();
-    public abstract JbNode getFirstChild();
-    public abstract JbNode getNextSibling();
+    public abstract ASTNode getFirstChild();
+    public abstract ASTNode getNextSibling();
 
     @Override
     public String toString() {

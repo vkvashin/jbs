@@ -1,11 +1,11 @@
 package org.jb.parser.api;
 
-import org.jb.ast.api.JbNode;
+import org.jb.ast.api.ASTNode;
 import java.util.Collections;
 import java.util.List;
-import org.jb.lexer.api.JbTokenStream;
-import org.jb.lexer.api.JbTokenStreamException;
+import org.jb.lexer.api.TokenStreamException;
 import org.jb.parser.impl.ParserImpl;
+import org.jb.lexer.api.TokenStream;
 
 /**
  *
@@ -13,11 +13,11 @@ import org.jb.parser.impl.ParserImpl;
  */
 public final class Parser {
     
-    public JbNode parse(JbTokenStream ts) throws JbTokenStreamException {
+    public ASTNode parse(TokenStream ts) throws TokenStreamException {
         return parse(ts, new DefaultParseErrorListener());
     }
 
-    public JbNode parse(JbTokenStream ts, ParseErrorListener errorListener) throws JbTokenStreamException {
+    public ASTNode parse(TokenStream ts, ParseErrorListener errorListener) throws TokenStreamException {
         return new ParserImpl(ts, errorListener).parse();
     }
 }

@@ -11,7 +11,7 @@ import java.util.Objects;
  *  - using smart CharSequence
  * @author vkvashin
  */
-public final class JbToken {
+public final class Token {
     
     public enum Kind {
         INT,    // integer literal
@@ -61,15 +61,15 @@ public final class JbToken {
     private final int column;
 
     /** In order to make optimizations without changing clients code possible, use factory method instead of ctor  */
-    public static JbToken create(Kind kind, CharSequence text, int line, int column) {
-        return new JbToken(kind, text, line, column);
+    public static Token create(Kind kind, CharSequence text, int line, int column) {
+        return new Token(kind, text, line, column);
     }
-    public static JbToken createFixed(Kind kind, int line, int column) {
+    public static Token createFixed(Kind kind, int line, int column) {
         assert kind.isFixedText();
-        return new JbToken(kind, kind.getFixedText(), line, column);
+        return new Token(kind, kind.getFixedText(), line, column);
     }
 
-    private JbToken(Kind kind, CharSequence text, int line, int column) {
+    private Token(Kind kind, CharSequence text, int line, int column) {
         this.kind = kind;
         this.text = text;
         this.line = line;
@@ -118,7 +118,7 @@ public final class JbToken {
         if (getClass() != obj.getClass()) {
             return false;
         }
-        final JbToken other = (JbToken) obj;
+        final Token other = (Token) obj;
         if (this.line != other.line) {
             return false;
         }

@@ -6,9 +6,9 @@
 package org.jb.parser.impl;
 
 import java.util.ArrayList;
-import org.jb.lexer.api.JbToken;
-import org.jb.lexer.api.JbTokenStream;
-import org.jb.lexer.api.JbTokenStreamException;
+import org.jb.lexer.api.Token;
+import org.jb.lexer.api.TokenStreamException;
+import org.jb.lexer.api.TokenStream;
 
 /**
  *
@@ -16,18 +16,18 @@ import org.jb.lexer.api.JbTokenStreamException;
  */
 public class ArrayTokenBuffer extends TokenBuffer {
 
-    private final ArrayList<JbToken> tokens;
+    private final ArrayList<Token> tokens;
     private int pos;
 
-    public ArrayTokenBuffer(JbTokenStream ts, int maxLA) throws JbTokenStreamException {
+    public ArrayTokenBuffer(TokenStream ts, int maxLA) throws TokenStreamException {
         super(maxLA);
         tokens = new ArrayList<>();
         pos = 0;
         fill(ts);
     }
 
-    private void fill(JbTokenStream ts) throws JbTokenStreamException {
-        for (JbToken tok = ts.next(); tok != null; tok = ts.next()) {
+    private void fill(TokenStream ts) throws TokenStreamException {
+        for (Token tok = ts.next(); tok != null; tok = ts.next()) {
             tokens.add(tok);
         }
     }
@@ -38,9 +38,9 @@ public class ArrayTokenBuffer extends TokenBuffer {
     }
 
     @Override
-    public JbToken LAImpl(int lookAhead) throws JbTokenStreamException {
+    public Token LAImpl(int lookAhead) throws TokenStreamException {
         int idx = pos + lookAhead;
-        JbToken tok = (idx < tokens.size()) ? tokens.get(idx) : null;
+        Token tok = (idx < tokens.size()) ? tokens.get(idx) : null;
         return tok;
     }
 }

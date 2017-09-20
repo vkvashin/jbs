@@ -5,9 +5,9 @@
  */
 package org.jb.parser.impl;
 
-import org.jb.lexer.api.JbToken;
-import org.jb.lexer.api.JbTokenStream;
-import org.jb.lexer.api.JbTokenStreamException;
+import org.jb.lexer.api.Token;
+import org.jb.lexer.api.TokenStreamException;
+import org.jb.lexer.api.TokenStream;
 
 /**
  *
@@ -15,16 +15,16 @@ import org.jb.lexer.api.JbTokenStreamException;
  */
 public class WindowTokenBuffer extends TokenBuffer {
 
-    private final JbToken[] tokens;
+    private final Token[] tokens;
     private int pos;
     private int size;
-    private JbTokenStream ts;
+    private TokenStream ts;
 
-    public WindowTokenBuffer(JbTokenStream ts, int maxLA, int bufferSize) throws JbTokenStreamException {
+    public WindowTokenBuffer(TokenStream ts, int maxLA, int bufferSize) throws TokenStreamException {
         super(maxLA);
         this.ts = ts;
         assert bufferSize > maxLA;
-        this.tokens = new JbToken[bufferSize];
+        this.tokens = new Token[bufferSize];
         this.pos = 0;
         this.size = 0;
         fill();
@@ -38,9 +38,9 @@ public class WindowTokenBuffer extends TokenBuffer {
         pos = 0;
     }
 
-    private void fill() throws JbTokenStreamException {
+    private void fill() throws TokenStreamException {
         while (size < tokens.length) {
-            JbToken tok = ts.next();
+            Token tok = ts.next();
             if (tok == null) {
                 break;
             } else {
@@ -55,14 +55,14 @@ public class WindowTokenBuffer extends TokenBuffer {
     }
 
     @Override
-    public JbToken LAImpl(int lookAhead) throws JbTokenStreamException {
+    public Token LAImpl(int lookAhead) throws TokenStreamException {
         int idx = pos + lookAhead;
         if (idx > tokens.length - 1) {
             shift();
             fill();
             idx = pos + lookAhead;
         }
-        JbToken tok = (idx < size) ? tokens[idx] : null;
+        Token tok = (idx < size) ? tokens[idx] : null;
         return tok;
     }
 }
