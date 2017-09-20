@@ -1,5 +1,7 @@
 package org.jb.lexer.api;
 
+import java.util.Objects;
+
 /**
  * Represents a token.
  * That's a quite straightforward token implementation, without any optimizations
@@ -94,5 +96,41 @@ public final class JbToken {
     public String toString() {
         return kind.toString() + ' ' + text + " [" + line + ':' + column + "] ";
     }    
-    
+
+    @Override
+    public int hashCode() {
+        int hash = 5;
+        hash = 79 * hash + Objects.hashCode(this.kind);
+        hash = 79 * hash + Objects.hashCode(this.text);
+        hash = 79 * hash + this.line;
+        hash = 79 * hash + this.column;
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final JbToken other = (JbToken) obj;
+        if (this.line != other.line) {
+            return false;
+        }
+        if (this.column != other.column) {
+            return false;
+        }
+        if (this.kind != other.kind) {
+            return false;
+        }
+        if (!Objects.equals(this.text, other.text)) {
+            return false;
+        }
+        return true;
+    }    
 }
