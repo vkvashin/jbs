@@ -10,7 +10,10 @@ import org.jb.ast.api.JbNode;
  */
 public class ParserImpl {
 
-    public JbNode parse(JbTokenStream ts) {
+    public ParserImpl(JbTokenStream ts) {
+    }
+
+    public JbNode parse() {
         return null;
     }
 }

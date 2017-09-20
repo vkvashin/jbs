@@ -13,6 +13,6 @@ import org.jb.parser.impl.ParserImpl;
 public final class JbParser {
     
     public JbNode parse(JbTokenStream ts) {
-        return new ParserImpl().parse(ts);
+        return new ParserImpl(ts).parse();
     }
 }

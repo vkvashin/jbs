@@ -2,6 +2,7 @@ package org.jb.lexer.api;
 
 
 import java.io.StringBufferInputStream;
+import java.util.ArrayList;
 import org.*;
 import org.*;
 import org.junit.Test;
@@ -24,6 +25,15 @@ public class LexerTestBase {
         // TODO: change as soon as we test non ascii input
         StringBufferInputStream is = new StringBufferInputStream(text);
         return new JbLexer(is).lex();
+    }
+
+    protected JbToken[] lexAndGetTokenArray(String text) throws Exception {
+        JbTokenStream ts = lex(text);
+        ArrayList<JbToken> tokens = new ArrayList<>();
+        for (JbToken tok = ts.next(); tok != null; tok = ts.next()) {
+            tokens.add(tok);
+        }
+        return tokens.toArray(new JbToken[tokens.size()]);
     }
     
     protected void setDebug(boolean debug) {
