@@ -1,12 +1,12 @@
 package org.jb.lexer.api;
 
 
-import java.io.StringBufferInputStream;
 import org.*;
 import org.*;
 import org.junit.Test;
-import org.jb.lexer.api.JbTokenStream;
-import org.jb.lexer.api.JbLexer;
+import org.jb.lexer.api.JbToken;
+import org.jb.lexer.api.JbTokenStreamException;
+import org.jb.lexer.api.LexerTestBase;
 import org.junit.Assert;
 
 /**
