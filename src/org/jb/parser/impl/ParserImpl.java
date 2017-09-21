@@ -20,7 +20,7 @@ public class ParserImpl {
     private final ParseErrorListener errorListener;
 
     public ParserImpl(TokenStream ts, ParseErrorListener errorListener) throws TokenStreamException {
-        tokens = new WindowTokenBuffer(ts, 1, 4096);
+        tokens = new ZeroLookaheadTokenBuffer(ts); //WindowTokenBuffer(ts, 1, 4096);
         this.errorListener = errorListener;
     }
 

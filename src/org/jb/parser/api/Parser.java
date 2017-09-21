@@ -8,7 +8,7 @@ import org.jb.parser.impl.ParserImpl;
 import org.jb.lexer.api.TokenStream;
 
 /**
- *
+ * Parses token stream and builds AST
  * @author vkvashin
  */
 public final class Parser {

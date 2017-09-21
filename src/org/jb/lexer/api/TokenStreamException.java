@@ -6,15 +6,8 @@ package org.jb.lexer.api;
  */
 public final class TokenStreamException extends Exception {
 
-    public TokenStreamException() {
-    }
-
     public TokenStreamException(String message) {
         super(message);
-    }
-
-    public TokenStreamException(String message, Throwable cause) {
-        super(message, cause);
     }
 
     public TokenStreamException(Throwable cause) {
