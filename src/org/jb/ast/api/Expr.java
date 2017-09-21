@@ -28,7 +28,9 @@ public abstract class Expr extends ASTNode {
 
     protected static void chainExpressions(Expr... exps) {
         for (int i = 0; i < exps.length; i++) {
-            exps[i].setNextSibling(i + 1 < exps.length ? exps[i + 1] : null);
+            if (exps[i] != null) {
+                exps[i].setNextSibling(i + 1 < exps.length ? exps[i + 1] : null);
+            }
         }
     }
     protected CharSequence toString(Expr... expressions) {
