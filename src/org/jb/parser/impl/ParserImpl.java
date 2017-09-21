@@ -1,5 +1,10 @@
 package org.jb.parser.impl;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
+import java.util.Stack;
 import org.jb.ast.api.DeclStatement;
 import org.jb.ast.api.*;
 import org.jb.lexer.api.*;
@@ -68,7 +73,7 @@ public class ParserImpl {
             case OUT:
                 return outStatement();
             default:
-                throw new SynaxError(tok, "statement should start with var, print or out");
+                throw new SynaxError(tok, "unexpected token " + tok.getText());
         }
     }
 
@@ -105,38 +110,71 @@ public class ParserImpl {
     }
 
     private Expr expression() throws SynaxError {
+        Stack<BinaryOpExpr.OpKind> opStack = new Stack();
+        Deque<Object> outQueue = new ArrayDeque<>(); // in fact only Expr and BinaryOpExpr.OpKind
+        Token firstTok = LA(0);
+        Expr operand = operand();
+        outQueue.add(operand);
+        while (isOperation(LA(0))) {
+            BinaryOpExpr.OpKind currOp = getOpKind(LA(0));
+            consume(); // operation
+            BinaryOpExpr.OpKind stackOp = opStack.isEmpty() ? null : opStack.peek();
+            if (stackOp != null && stackOp.isStronger(currOp)) {
+                outQueue.add(opStack.pop());
+            }
+            opStack.push(currOp);
+            operand = operand();
+            outQueue.add(operand);
+        }
+        while(!opStack.isEmpty()) {
+            outQueue.add(opStack.pop());
+        }
+        return expressionFromPN(outQueue, firstTok);
+    }
+
+    /**
+     * Constructs an expression AST from a polish notation queue
+     * @param q queue that contains expressions and operation kinds
+     */
+    private Expr expressionFromPN(Deque<Object> q, Token firstTok) {
+        assert !q.isEmpty();
+        Object o = q.pollLast();
+        if (o instanceof Expr) {
+            return (Expr) o;
+        }
+        BinaryOpExpr.OpKind op = (BinaryOpExpr.OpKind) o;
+        Expr right = expressionFromPN(q, null);
+        Expr left = expressionFromPN(q, null);
+        int line = (firstTok == null) ? left.getLine() : firstTok.getLine();
+        int column = (firstTok == null) ? left.getColumn(): firstTok.getColumn();
+        return new BinaryOpExpr(line, column, op, left, right);
+    }
+
+    private Expr operand() throws SynaxError {
         final Token firstTok = LA(0);
         if (firstTok == null) {
             throw new SynaxError("unexpected end of file: expected expression");
         }
         switch (firstTok.getKind()) {
             case INT:
-                return tryOperation(intLiteral());
+                return intLiteral();
             case FLOAT:
-                return tryOperation(floatLiteral());
+                return floatLiteral();
             case STRING:
                 return stringLiteral();
             case ID:
-                return tryOperation(id());
+                return id();
             case LPAREN:
-                return tryOperation(paren());
+                return paren();
             case LCURLY:
                 return seq();
             case MAP:
                 return map();
             case REDUCE:
-                return tryOperation(reduce());
+                return reduce();
             default:
-                throw new SynaxError(firstTok, "unexpected token: expected expression");
+                throw new SynaxError(firstTok, "unexpected token: " + firstTok.getText() + " expected expression");
         }
-    }
-
-    private Expr tryOperation(Expr expr) throws SynaxError {
-        // expression is already consumed
-        if (isOperation(LA(0))) {
-            return operation(expr);
-        }
-        return expr;
     }
 
     private boolean isOperation(Token tok) {
@@ -169,15 +207,6 @@ public class ParserImpl {
                 assert false : "should be an operation: " + tok;
                 return null;
         }
-    }
-
-    private BinaryOpExpr operation(Expr left) throws SynaxError {
-        Token opTok = LA(0);
-        assert isOperation(opTok);
-        consume();
-        Expr right = expression();
-        BinaryOpExpr.OpKind opKind = getOpKind(opTok);
-        return new BinaryOpExpr(left.getLine(), left.getColumn(), opKind, left, right);
     }
 
     private IntLiteral intLiteral() throws SynaxError {

@@ -12,14 +12,22 @@ package org.jb.ast.api;
 public final class BinaryOpExpr extends Expr {
 
     public enum OpKind {
-        ADD('+'),
-        SUB('-'),
-        DIV('/'),
-        MUL('*'),
-        POW('^');
+        ADD('+', 0),
+        SUB('-', 0),
+        DIV('/', 1),
+        MUL('*', 1),
+        POW('^', 2);
         public final char id;
-        private OpKind(char id) {
+        public final byte weight;
+        private OpKind(char id, int weight) {
             this.id = id;
+            this.weight = (byte) weight; // otherwise we have to cast in all ctors
+        }
+        public boolean isStronger(OpKind other) {
+            return other == null || this.weight > other.weight;
+        }
+        public boolean isWeaker(OpKind other) {
+            return other != null && this.weight < other.weight;
         }
     }
 

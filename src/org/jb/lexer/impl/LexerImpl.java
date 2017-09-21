@@ -114,7 +114,6 @@ public class LexerImpl {
                 case '-':
                     return readArrowOpOrNumber(c);
                 case '+':
-                    return readNumberOrOp(c);
                 case '*':
                 case '/':
                 case '^':
