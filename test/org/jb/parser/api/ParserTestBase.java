@@ -88,7 +88,9 @@ public class ParserTestBase extends LexerTestBase {
     protected void doTestAST(String source, String[] expected) throws Exception {
         TokenStream ts = lex(source);
         ASTNode ast = new Parser().parse(ts);
-        //printAst(ast);
+        if (isDebug()) {
+            printAst(ast);
+        }
         String[] actual = getAstDumpLines(ast);
         assertEquals("AST dump differs", expected, actual);
     }
@@ -97,15 +99,24 @@ public class ParserTestBase extends LexerTestBase {
         for (int i = 0; i < expected.length; i++) {
             if (i < actual.length) {
                 if (!expected[i].equals(actual[i])) {
-                    assertTrue(message + ": line " + i + " differs: expected vs actual is\n" + expected[i] + "\n" + actual[i], false);
+                    assertAndPrint(message + ": line " + i + " differs: expected vs actual is\n" + expected[i] + "\n" + actual[i], actual);
                 }
             } else {
-                assertTrue(message + " premature end of output", false);
+                assertAndPrint(message + " premature end of output", actual);
             }
         }
         if (expected.length < actual.length) {
-            assertTrue(message + " actual output is longer by " + (actual.length - expected.length) + " lines", false);
+            assertAndPrint(message + " actual output is longer by " + (actual.length - expected.length) + " lines", actual);
         }
+    }
+
+    private void assertAndPrint(String assertionMessage, String[] linesToPrint) {
+        StringBuilder sb = new StringBuilder(assertionMessage);
+        sb.append("\nFull dump:");
+        for (String l : linesToPrint) {
+            sb.append('\n').append(l);
+        }
+        assertTrue(sb.toString(), false);
     }
 
     private static class StringPrintStream extends PrintStream implements CharSequence {

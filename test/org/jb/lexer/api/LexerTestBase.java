@@ -40,6 +40,10 @@ public class LexerTestBase {
         this.debug = debug;    
     }
 
+    public boolean isDebug() {
+        return debug;
+    }
+
     protected void printTokens(TokenStream ts) throws Exception {
         Token tok;
         while((tok = ts.next()) != null) {

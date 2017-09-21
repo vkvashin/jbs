@@ -102,6 +102,38 @@ public class ParserSimpleTest extends ParserTestBase {
     }
 
     @Test
+    public void testParsePrecedenceMulAdd() throws Exception {
+        // * stronger than +
+        String source = "var a = 2*3+4";
+        String[] expected = new String[] {
+            "DECL [1:1] a",
+            "    OP [1:9] +",
+            "        OP [1:9] *",
+            "            INT [1:9] 2",
+            "            INT [1:11] 3",
+            "        INT [1:13] 4"
+        };
+        //printAst(new Parser().parse(lex(source)));
+        doTestAST(source, expected);
+    }
+
+    @Test
+    public void testParsePrecedenceMulPow() throws Exception {
+        // * stronger than +
+        String source = "var a = 2*3^4";
+        String[] expected = new String[] {
+            "DECL [1:1] a",
+            "    OP [1:9] *",
+            "        INT [1:9] 2",
+            "        OP [1:11] ^",
+            "            INT [1:11] 3",
+            "            INT [1:13] 4"
+        };
+        //printAst(new Parser().parse(lex(source)));
+        doTestAST(source, expected);
+    }
+
+    @Test
     public void testParserFromTZ() throws Exception {
         String source =
             "var n = 500\n" +
@@ -118,17 +150,17 @@ public class ParserSimpleTest extends ParserTestBase {
             "            INT [2:21] 0",
             "            ID [2:24] n",
             "        ID [2:28] i",
-            "        OP [2:33] ^",
-            "            PAREN [2:33] ",
-            "                INT [2:34] -1",
-            "            OP [2:38] /",
+            "        OP [2:33] /",
+            "            OP [2:33] ^",
+            "                PAREN [2:33] ",
+            "                    INT [2:34] -1",
             "                ID [2:38] i",
-            "                PAREN [2:42] ",
+            "            PAREN [2:42] ",
+            "                OP [2:43] +",
             "                    OP [2:43] *",
             "                        FLOAT [2:43] 2.0",
-            "                        OP [2:49] +",
-            "                            ID [2:49] i",
-            "                            INT [2:53] 1",
+            "                        ID [2:49] i",
+            "                    INT [2:53] 1",
             "DECL [3:1] pi",
             "    OP [3:10] *",
             "        INT [3:10] 4",
@@ -145,11 +177,7 @@ public class ParserSimpleTest extends ParserTestBase {
             "OUT [5:1] ",
             "    ID [5:5] pi"
         };
+        //setDebug(true);
         doTestAST(source, expected);
-//        TokenStream ts = lex(source);
-//        //printTokens(ts);
-//        //ts = lex(text);
-//        ASTNode ast = new Parser().parse(ts);
-//        printAst(ast);
     }
 }
