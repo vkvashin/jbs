@@ -3,13 +3,20 @@ package org.jb.lexer.api;
 
 import java.io.StringBufferInputStream;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import org.*;
 import org.*;
+import org.jb.ast.diagnostics.DefaultDiagnosticListener;
+import org.jb.ast.diagnostics.Diagnostic;
+import org.jb.ast.diagnostics.DiagnosticListener;
 import org.junit.Test;
 import org.jb.lexer.api.Lexer;
 import org.jb.lexer.api.Token;
 import org.junit.Assert;
 import org.jb.lexer.api.TokenStream;
+import org.junit.After;
+import org.junit.Before;
 
 
 /**
@@ -19,12 +26,44 @@ import org.jb.lexer.api.TokenStream;
 public class LexerTestBase {
     
     private boolean debug = false;
+    
+    private final List<Diagnostic> diagnostics = new ArrayList<>();
+    private final DiagnosticListener diagnosticListener = new DiagnosticListener() {
+        DiagnosticListener defaultListener = new DefaultDiagnosticListener();                
+        @Override
+        public void report(Diagnostic issue) {
+            defaultListener.report(issue);
+            diagnostics.add(issue);
+        }
+    };
+
+    public DiagnosticListener getTestDiagnosticListener() {
+        return diagnosticListener;
+    }
+    
+    @Before
+    public void setUp() {
+        diagnostics.clear();
+        debug = false;
+    }
+    
+    protected List<Diagnostic> getDiagnostics() {
+        return Collections.unmodifiableList(diagnostics);
+    }
+    
+    protected void assertEmptyDiagnostics() {
+        Assert.assertTrue(getDiagnostics().isEmpty());
+    }
+
+    protected void assertNonEmptyDiagnostics() {
+        Assert.assertTrue(!getDiagnostics().isEmpty());
+    }
 
     protected TokenStream lex(String text) {
         // StringBufferInputStream is deprecated since it does not work with non-ascii well.
         // TODO: change as soon as we test non ascii input
         StringBufferInputStream is = new StringBufferInputStream(text);
-        return new Lexer(is).lex();
+        return new Lexer(is, diagnosticListener).lex();
     }
 
     protected Token[] lexAndGetTokenArray(String text) throws Exception {

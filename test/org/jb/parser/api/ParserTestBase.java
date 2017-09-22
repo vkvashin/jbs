@@ -87,7 +87,7 @@ public class ParserTestBase extends LexerTestBase {
 
     protected void doTestAST(String source, String[] expected) throws Exception {
         TokenStream ts = lex(source);
-        ASTNode ast = new Parser().parse(ts);
+        ASTNode ast = new Parser().parse(ts, getTestDiagnosticListener());
         if (isDebug()) {
             printAst(ast);
         }

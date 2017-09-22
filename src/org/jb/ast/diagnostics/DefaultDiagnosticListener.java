@@ -9,10 +9,8 @@ public class DefaultDiagnosticListener implements DiagnosticListener {
     @Override
     public void report(Diagnostic issue) {
         System.err.println(issue.getDisplayText());
-    }
-    
-    @Override
-    public void error(Exception e) {
-        e.printStackTrace();
+        for(Diagnostic child = issue.getChained(); child != null; child = child.getChained()) {
+            System.err.println(child.getDisplayText());
+        }
     }
 }

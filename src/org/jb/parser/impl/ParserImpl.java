@@ -39,7 +39,7 @@ public class ParserImpl {
 
     private void skipToTheNextLine() {
         Token tok = LA(0);
-        if (isEOF(tok)) {
+        if (!isEOF(tok)) {
             int line = tok.getLine();
             while (!isEOF(tok) && tok.getLine() == line) {
                 consume();
@@ -313,14 +313,10 @@ public class ParserImpl {
 
     /** just a conveniency shortcut */
     private Token LA(int lookAhead)  {
-        // skip some erroneous tokens
-        for (int i = 0; i < 10; i++) {
-            try {
-                return tokens.LA(lookAhead);
-            } catch (TokenStreamException ex) {
-                tokens.consume();
-                errorListener.error(ex);
-            }
+        try {
+            return tokens.LA(lookAhead);
+        } catch (TokenStreamException ex) {
+            errorListener.report(Diagnostic.fatal(-1, -1, ex.getMessage()));
         }
         return null; // TODO: return EOF or throw an exception
     }

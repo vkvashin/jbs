@@ -7,8 +7,14 @@ package org.jb.ast.diagnostics;
 public final class Diagnostic {
     
     private enum Level {
+        /** Just a warning. */
         WARNING("Warning"),
-        ERROR("Error");
+        
+        /** A (syntax) error occurred; the rest of the source can be probably successfully processed. */
+        ERROR("Error"),
+        
+        /** A fatal error occurred; further processing is impossible. */
+        FATAL("Fatal error");
 
         public String getDisplayName() {
             return displayName;
@@ -31,7 +37,11 @@ public final class Diagnostic {
     }
 
     public static Diagnostic error(int line, int column, CharSequence message) {
-        return new Diagnostic(Level.WARNING, line, column, message);
+        return new Diagnostic(Level.ERROR, line, column, message);
+    }
+
+    public static Diagnostic fatal(int line, int column, CharSequence message) {
+        return new Diagnostic(Level.FATAL, line, column, message);
     }
 
     private Diagnostic(Level level, int line, int column, CharSequence message) {

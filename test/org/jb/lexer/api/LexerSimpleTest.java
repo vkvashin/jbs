@@ -24,6 +24,7 @@ public class LexerSimpleTest  extends LexerTestBase {
             Token.Kind.COMMA,  null, 1, 5,
             Token.Kind.EQ,     null, 1, 6
         ));
+        assertEmptyDiagnostics();
     }
     
     @Test
@@ -33,18 +34,20 @@ public class LexerSimpleTest  extends LexerTestBase {
             Token.Kind.FLOAT, "3.14", 1, 5,
             Token.Kind.FLOAT, "-2.7", 1, 10
         ));
+        assertEmptyDiagnostics();
     }
     
     @Test
-    public void simpleTestNumbers2() throws Exception {
-        try {
-            doSimpleTest("1.2.3", new Token[1]);
-            Assert.assertTrue("JbTokenStreamException should be generated", false);
-        } catch (TokenStreamException ex) {
-            // OK
-        }
+    public void simpleTestNumbersWithErrors() throws Exception {
+        setDebug(true);
+        doSimpleTest("1.2.3 var y", createRefTokens(
+                Token.Kind.FLOAT, "1.2", 1, 1,
+                Token.Kind.VAR, null, 1, 7,
+                Token.Kind.ID, "y", 1, 11
+        ));
+        assertNonEmptyDiagnostics();
     }    
-    
+
     @Test
     public void simpleTestOps() throws Exception {
         doSimpleTest("+-*/^", createRefTokens(Token.Kind.ADD, null, 1, 1,
@@ -53,14 +56,22 @@ public class LexerSimpleTest  extends LexerTestBase {
             Token.Kind.DIV, null, 1, 4,
             Token.Kind.POW, null, 1, 5
         ));
+        assertEmptyDiagnostics();
     }
-    
+       
     @Test
     public void simpleTestString() throws Exception {
         doSimpleTest("\"qwe\" \"asd\nzxc\" \"\"", createRefTokens(Token.Kind.STRING, "qwe", 1, 1,
             Token.Kind.STRING, "asd\nzxc", 1, 7,
             Token.Kind.STRING, "", 2, 6
         ));
+        assertEmptyDiagnostics();
+    }
+
+    @Test
+    public void testUnterminatedString() throws Exception {
+        doSimpleTest("\"qwe", createRefTokens(Token.Kind.STRING, "qwe", 1, 1));
+        assertNonEmptyDiagnostics();
     }
 
     @Test
@@ -71,6 +82,7 @@ public class LexerSimpleTest  extends LexerTestBase {
             Token.Kind.PRINT, null, 1, 17,
             Token.Kind.OUT, null, 1, 23
         ));
+        assertEmptyDiagnostics();
     }
     
     @Test
@@ -136,5 +148,6 @@ public class LexerSimpleTest  extends LexerTestBase {
             Token.Kind.OUT, null, 6, 1, 
             Token.Kind.ID, "pi", 6, 5                 
         ));
+        assertEmptyDiagnostics();
     }   
 }

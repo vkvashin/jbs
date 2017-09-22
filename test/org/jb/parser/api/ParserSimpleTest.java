@@ -9,7 +9,9 @@ import java.io.File;
 import java.io.PrintStream;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.List;
 import org.jb.ast.api.ASTNode;
+import org.jb.ast.diagnostics.Diagnostic;
 import org.jb.lexer.api.Token;
 import org.jb.lexer.api.TokenStreamException;
 import org.jb.parser.impl.TokenBuffer;
@@ -65,12 +67,15 @@ public class ParserSimpleTest extends ParserTestBase {
     @Test
     public void testArrayTokenBuffer() throws Exception {
         doTestTokenBuffer((TokenStream ts, int maxLA) -> new ArrayTokenBuffer(ts, maxLA), 2);
+        assertEmptyDiagnostics();
     }
 
     @Test
     public void testWindowTokenBuffer() throws Exception {
         doTestTokenBuffer((TokenStream ts, int maxLA) -> new WindowTokenBuffer(ts, maxLA, 1024), 2);
+        assertEmptyDiagnostics();
         doTestTokenBuffer((TokenStream ts, int maxLA) -> new WindowTokenBuffer(ts, maxLA, 3), 2);
+        assertEmptyDiagnostics();
     }
 
     @Test
@@ -99,11 +104,64 @@ public class ParserSimpleTest extends ParserTestBase {
             "    ID [6:5] x"
         };
         doTestAST(source, expected);
+        assertEmptyDiagnostics();
     }
 
     @Test
+    public void testSimplestErrorProcessing() throws Exception {
+        String source =
+                "var x = 5.4.3\n" + // lexer error
+                "var y = 3.14\n" +
+                "var w = y + 1\n" +
+                "123 some shit 456\n" + // parser error
+                "print \"x = \"\n" +
+                "out x\n" +
+                "print \"unterminated\n"; // lexer error
+        String[] expected = new String[] {
+            "DECL [1:1] x",
+            "    FLOAT [1:9] 5.4",
+            "DECL [2:1] y",
+            "    FLOAT [2:9] 3.14",
+            "DECL [3:1] w",
+            "    OP [3:9] +",
+            "        ID [3:9] y",
+            "        INT [3:13] 1",
+            "PRINT [5:1] ",
+            "    STRING [5:7] x = ",
+            "OUT [6:1] ",
+            "    ID [6:5] x",
+            "PRINT [7:1] ",
+            "    STRING [7:7] unterminated"
+        };
+        setDebug(true);
+        doTestAST(source, expected);
+        assertDiagnosticEquals(0, 1, 9, "more than one digital point");
+        assertDiagnosticEquals(1, 4, 1, "Syntax error in 4:1: unexpected token 123");
+        assertDiagnosticEquals(2, 8, 1, "unterminated string");        
+    }
+    
+    protected void assertDiagnosticEquals(int index, int line, int column, String message) {
+        List<Diagnostic> diagnostics = getDiagnostics();
+        if (index < diagnostics.size()) {
+            Diagnostic d = diagnostics.get(index);
+            if (line >= 0 && d.getLine() != line) {
+                assertTrue("Diagnostic #" + index + " has wrong line, expected " + line + " but actual " + d.getLine(), false);
+            }
+            if (column >= 0 && d.getColumn() != column) {
+                assertTrue("Diagnostic #" + index + " has wrong column, expected " + column + " but actual " + d.getColumn(), false);
+            }
+            if (message != null && ! message.contentEquals(d.getMessage())) {
+                assertTrue("Diagnostic #" + index + " has wrong message, expected " + message + " but actual " + d.getMessage(), false);
+            }
+        } else {
+            assertTrue("There should be at least " + index+1 + "diagnostics", false);
+        }
+    }
+    
+    
+    @Test
     public void testParsePrecedenceMulAdd() throws Exception {
-        // * stronger than +
+        // * stronger than +s
         String source = "var a = 2*3+4";
         String[] expected = new String[] {
             "DECL [1:1] a",
@@ -115,6 +173,7 @@ public class ParserSimpleTest extends ParserTestBase {
         };
         //printAst(new Parser().parse(lex(source)));
         doTestAST(source, expected);
+        assertEmptyDiagnostics();
     }
 
     @Test
@@ -131,6 +190,7 @@ public class ParserSimpleTest extends ParserTestBase {
         };
         //printAst(new Parser().parse(lex(source)));
         doTestAST(source, expected);
+        assertEmptyDiagnostics();
     }
 
     @Test
@@ -179,5 +239,6 @@ public class ParserSimpleTest extends ParserTestBase {
         };
         //setDebug(true);
         doTestAST(source, expected);
+        assertEmptyDiagnostics();
     }
 }

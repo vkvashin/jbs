@@ -2,6 +2,8 @@ package org.jb.lexer.impl;
 
 import java.io.IOException;
 import java.io.InputStream;
+import org.jb.ast.diagnostics.Diagnostic;
+import org.jb.ast.diagnostics.DiagnosticListener;
 import org.jb.lexer.api.Token;
 import org.jb.lexer.api.TokenFactory;
 import org.jb.lexer.api.TokenStreamException;
@@ -15,10 +17,12 @@ public class LexerImpl {
     
     private final InputStreamWrapper is;
     private final TokenFactory tokenFactory;
+    private final DiagnosticListener diagnosticListener;
 
-    public LexerImpl(InputStream is, TokenFactory tokenFactory) {
+    public LexerImpl(InputStream is, TokenFactory tokenFactory, DiagnosticListener diagnosticListener) {
         this.is = new InputStreamWrapper(is);
         this.tokenFactory = tokenFactory;
+        this.diagnosticListener = diagnosticListener;
     }
 
     public TokenStream lex() {
@@ -76,6 +80,11 @@ public class LexerImpl {
         }
     }
     
+    @FunctionalInterface
+    private interface BoolPredicate {
+        boolean isTrue(char c);
+    }
+    
     private class TokenStreamImpl implements TokenStream {
         
         private Token EOF = null;
@@ -83,7 +92,13 @@ public class LexerImpl {
         @Override
         public Token next() throws TokenStreamException {            
             try {
-                return nextImpl();
+                while (true) {
+                    Token tok = nextImpl();
+                    if (tok != null) {
+                        return tok;
+                    }
+                    consumeWhile((char curr) -> !isSpace(curr)); // consume until next space
+                }
             } catch (IOException ex) {
                 throw new TokenStreamException(ex);
             }
@@ -137,8 +152,20 @@ public class LexerImpl {
                 case '=':
                     return tokenFactory.createFixed(Token.Kind.EQ, is.getLine(), is.getColumn());
                 default:
-                    return readIdVarOrFunction(c);
+                    if (Character.isJavaIdentifierStart(c)) {
+                        return readIdVarOrFunction(c);
+                    } else {
+                        diagnosticListener.report(Diagnostic.error(is.getLine(), is.getColumn(), "unexpected character '" + c + "'"));
+                        return null;
+                    }                                        
             }
+        }
+        
+        private void consumeWhile(BoolPredicate condition) throws IOException {
+            char c;
+            do {
+                c = is.read();
+            } while (c != 0 && condition.isTrue(c));
         }
 
         private Token readNumber(char c) throws IOException, TokenStreamException {
@@ -155,7 +182,9 @@ public class LexerImpl {
                         kind = Token.Kind.FLOAT;
                         sb.append(c);
                     } else {
-                        throw new TokenStreamException("Syntax error: two digital points at " + is.getLine() + ':' + is.getColumn());
+                        diagnosticListener.report(Diagnostic.error(line, col, "more than one digital point"));
+                        consumeWhile((char curr) -> curr == '.' || Character.isDigit(curr));
+                        break;
                     }
                 } else {
                     is.unread(c);
@@ -171,7 +200,8 @@ public class LexerImpl {
             StringBuilder sb = new StringBuilder();
             for(char c = is.read(); c != '"'; c = is.read()) {
                 if (c == 0) {
-                    throw new TokenStreamException("Syntax error: unterminated string at " + is.getLine() + ':' + is.getColumn());
+                    diagnosticListener.report(Diagnostic.error(is.getLine(), is.getColumn(), "unterminated string"));
+                    break;
                 }
                 sb.append(c);
             }
@@ -179,9 +209,7 @@ public class LexerImpl {
         }
 
         private Token readIdVarOrFunction(char c) throws TokenStreamException, IOException {
-            if (!Character.isJavaIdentifierStart(c)) {
-                throw new TokenStreamException("Syntax error: unexpected character '" + c + "' at " + is.getLine() + ':' + is.getColumn());
-            }
+            assert Character.isJavaIdentifierStart(c);
             StringBuilder sb = new StringBuilder().append(c);
             int line = is.getLine();
             int col = is.getColumn();
