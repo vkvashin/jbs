@@ -5,6 +5,7 @@ import java.util.Deque;
 import java.util.Stack;
 import org.jb.ast.api.DeclStatement;
 import org.jb.ast.api.*;
+import org.jb.ast.diagnostics.Diagnostic;
 import org.jb.lexer.api.*;
 import org.jb.ast.diagnostics.DiagnosticListener;
 
@@ -52,7 +53,7 @@ public class ParserImpl {
             try {
                 return statementImpl();
             } catch (SynaxError ex) {
-                errorListener.error(ex);
+                errorListener.report(toDiagnostic(ex));
                 skipToTheNextLine();
             }
         }
@@ -151,7 +152,7 @@ public class ParserImpl {
     private Expr operand() throws SynaxError {
         final Token firstTok = LA(0);
         if (isEOF(firstTok)) {
-            throw new SynaxError("unexpected end of file: expected expression");
+            throw new SynaxError(firstTok, "unexpected end of file: expected expression");
         }
         switch (firstTok.getKind()) {
             case INT:
@@ -340,13 +341,33 @@ public class ParserImpl {
         }
     }
 
+    private static Diagnostic toDiagnostic(SynaxError err) {
+        return Diagnostic.error(err.getLine(), err.getColumn(), err.getLocalizedMessage());
+    }
+
     private static class SynaxError extends Exception {
-        SynaxError(String message) {
-            this(null, message);
-        }
+        
+        private final int line;
+        private final int column;
+        
         SynaxError(Token tok, String message) {
             super(composeMessage(tok, message));
+            if (tok == null/*paranoia*/) {
+                line = column = Integer.MAX_VALUE;
+            } else {
+                line = tok.getLine();
+                column = tok.getColumn();
+            }
         }
+
+        public int getLine() {
+            return line;
+        }
+
+        public int getColumn() {
+            return column;
+        }
+        
         private static String composeMessage(Token tok, String message) {
             if (tok == null) {
                 return "Syntax error: " + message;
