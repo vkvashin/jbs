@@ -3,6 +3,7 @@ package org.jb.lexer.impl;
 import java.io.IOException;
 import java.io.InputStream;
 import org.jb.lexer.api.Token;
+import org.jb.lexer.api.TokenFactory;
 import org.jb.lexer.api.TokenStreamException;
 import org.jb.lexer.api.TokenStream;
 
@@ -13,9 +14,11 @@ import org.jb.lexer.api.TokenStream;
 public class LexerImpl {
     
     private final InputStreamWrapper is;
+    private final TokenFactory tokenFactory;
 
-    public LexerImpl(InputStream is) {
+    public LexerImpl(InputStream is, TokenFactory tokenFactory) {
         this.is = new InputStreamWrapper(is);
+        this.tokenFactory = tokenFactory;
     }
 
     public TokenStream lex() {
@@ -121,17 +124,17 @@ public class LexerImpl {
                 case '"':
                     return readString();
                 case '(':
-                    return Token.createFixed(Token.Kind.LPAREN, is.getLine(), is.getColumn());
+                    return tokenFactory.createFixed(Token.Kind.LPAREN, is.getLine(), is.getColumn());
                 case ')':
-                    return Token.createFixed(Token.Kind.RPAREN, is.getLine(), is.getColumn());
+                    return tokenFactory.createFixed(Token.Kind.RPAREN, is.getLine(), is.getColumn());
                 case '{':
-                    return Token.createFixed(Token.Kind.LCURLY, is.getLine(), is.getColumn());
+                    return tokenFactory.createFixed(Token.Kind.LCURLY, is.getLine(), is.getColumn());
                 case '}':
-                    return Token.createFixed(Token.Kind.RCURLY, is.getLine(), is.getColumn());
+                    return tokenFactory.createFixed(Token.Kind.RCURLY, is.getLine(), is.getColumn());
                 case ',':
-                    return Token.createFixed(Token.Kind.COMMA, is.getLine(), is.getColumn());
+                    return tokenFactory.createFixed(Token.Kind.COMMA, is.getLine(), is.getColumn());
                 case '=':
-                    return Token.createFixed(Token.Kind.EQ, is.getLine(), is.getColumn());
+                    return tokenFactory.createFixed(Token.Kind.EQ, is.getLine(), is.getColumn());
                 default:
                     return readIdVarOrFunction(c);
             }
@@ -158,7 +161,7 @@ public class LexerImpl {
                     break;
                 }
             }            
-            return Token.create(kind, sb, line, col);
+            return tokenFactory.create(kind, sb, line, col);
         }
 
         private Token readString() throws IOException, TokenStreamException {
@@ -171,7 +174,7 @@ public class LexerImpl {
                 }
                 sb.append(c);
             }
-            return Token.create(Token.Kind.STRING, sb, line, col);
+            return tokenFactory.create(Token.Kind.STRING, sb, line, col);
         }
 
         private Token readIdVarOrFunction(char c) throws TokenStreamException, IOException {
@@ -188,33 +191,19 @@ public class LexerImpl {
             for (Token.Kind kind : new Token.Kind[] {Token.Kind.MAP, Token.Kind.REDUCE, Token.Kind.PRINT, Token.Kind.OUT, Token.Kind.VAR}) {
                 assert kind.isFixedText();
                 if (kind.getFixedText().contentEquals(sb)) {
-                    return Token.createFixed(kind, line, col);
+                    return tokenFactory.createFixed(kind, line, col);
                 }
             }
-            return Token.create(Token.Kind.ID, sb, line, col);
-        }
-
-        private Token readNumberOrOp(char c) throws IOException, TokenStreamException {
-            assert c == '+';
-            c = is.read();
-            if (c == 0) {
-                return Token.createFixed(Token.Kind.ADD, is.getLine(), is.getColumn());
-            } else if(Character.isDigit(c)) {
-                is.unread(c);
-                return readNumber('+');
-            } else {
-                is.unread(c);
-                return Token.createFixed(Token.Kind.ADD, is.getLine(), is.getColumn());
-            }            
+            return tokenFactory.create(Token.Kind.ID, sb, line, col);
         }
 
         private Token readOp(char c) {
             switch (c) {
-                case '+':   return Token.createFixed(Token.Kind.ADD, is.getLine(), is.getColumn());
-                case '-':   return Token.createFixed(Token.Kind.SUB, is.getLine(), is.getColumn());
-                case '*':   return Token.createFixed(Token.Kind.MUL, is.getLine(), is.getColumn());
-                case '/':   return Token.createFixed(Token.Kind.DIV, is.getLine(), is.getColumn());
-                case '^':   return Token.createFixed(Token.Kind.POW, is.getLine(), is.getColumn());
+                case '+':   return tokenFactory.createFixed(Token.Kind.ADD, is.getLine(), is.getColumn());
+                case '-':   return tokenFactory.createFixed(Token.Kind.SUB, is.getLine(), is.getColumn());
+                case '*':   return tokenFactory.createFixed(Token.Kind.MUL, is.getLine(), is.getColumn());
+                case '/':   return tokenFactory.createFixed(Token.Kind.DIV, is.getLine(), is.getColumn());
+                case '^':   return tokenFactory.createFixed(Token.Kind.POW, is.getLine(), is.getColumn());
                 default:    throw new IllegalArgumentException("Unexpected readOp('" + c + "')");
             }
         }
@@ -223,15 +212,15 @@ public class LexerImpl {
             assert c == '-';
             c = is.read();
             if (c == 0) {
-                return Token.createFixed(Token.Kind.SUB, is.getLine(), is.getColumn());
+                return tokenFactory.createFixed(Token.Kind.SUB, is.getLine(), is.getColumn());
             } else if (c == '>') {
-                return Token.createFixed(Token.Kind.ARROW, is.getLine(), is.getColumn() - 1);
+                return tokenFactory.createFixed(Token.Kind.ARROW, is.getLine(), is.getColumn() - 1);
             } else if(Character.isDigit(c)) {
                 is.unread(c);
                 return readNumber('-');
             } else {
                 is.unread(c);
-                return Token.createFixed(Token.Kind.SUB, is.getLine(), is.getColumn());
+                return tokenFactory.createFixed(Token.Kind.SUB, is.getLine(), is.getColumn());
             }            
         }
     }

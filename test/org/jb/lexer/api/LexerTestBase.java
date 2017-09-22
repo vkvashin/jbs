@@ -76,6 +76,7 @@ public class LexerTestBase {
     }
 
     protected Token[] createRefTokens(Object... args) {
+        TokenFactory tokenFactory = new TokenFactoryImpl();
         assert args.length % 4 == 0;
         Token[] res = new Token[args.length / 4];
         for (int i = 0; i < args.length; i+=4) {
@@ -84,7 +85,7 @@ public class LexerTestBase {
             int line = ((Integer) args[i+2]).intValue();
             int column = ((Integer) args[i+3]).intValue();
             Token tok;
-            tok = (text == null) ? Token.createFixed(kind, line, column) : Token.create(kind, text, line, column);           
+            tok = (text == null) ? tokenFactory.createFixed(kind, line, column) : tokenFactory.create(kind, text, line, column);           
             res[i / 4] = tok;
         }
         return res;

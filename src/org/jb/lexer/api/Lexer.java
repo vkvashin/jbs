@@ -12,9 +12,9 @@ public final class Lexer {
     private final LexerImpl lexer;
     
     public Lexer(InputStream is) {
-        lexer = new LexerImpl(is);
+        lexer = new LexerImpl(is, new TokenFactoryImpl());
     }
-    
+
     /** Lex the input stream and return token sequence. */
     public TokenStream lex() {
         return lexer.lex();

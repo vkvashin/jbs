@@ -60,16 +60,11 @@ public final class Token {
     private final int line;
     private final int column;
 
-    /** In order to make optimizations without changing clients code possible, use factory method instead of ctor  */
-    public static Token create(Kind kind, CharSequence text, int line, int column) {
-        return new Token(kind, text, line, column);
-    }
-    public static Token createFixed(Kind kind, int line, int column) {
-        assert kind.isFixedText();
-        return new Token(kind, kind.getFixedText(), line, column);
-    }
-
-    private Token(Kind kind, CharSequence text, int line, int column) {
+    /** 
+     * Package-level ctor: it's not a clients' business to create token instances -
+     * see TokenFactory and TokenFactoryImpl.
+     */
+    /*package*/ Token(Kind kind, CharSequence text, int line, int column) {
         this.kind = kind;
         this.text = text;
         this.line = line;
