@@ -27,7 +27,7 @@ public class ArrayTokenBuffer extends TokenBuffer {
     }
 
     private void fill(TokenStream ts) throws TokenStreamException {
-        for (Token tok = ts.next(); tok != null; tok = ts.next()) {
+        for (Token tok = ts.next(); !Token.isEOF(tok); tok = ts.next()) {
             tokens.add(tok);
         }
     }

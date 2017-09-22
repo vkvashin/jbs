@@ -78,6 +78,7 @@ public class LexerImpl {
     
     private class TokenStreamImpl implements TokenStream {
         
+        private Token EOF = null;
 
         @Override
         public Token next() throws TokenStreamException {            
@@ -94,7 +95,7 @@ public class LexerImpl {
             while (true) {
                 c = is.read();
                 if (c == 0) {
-                    return null;
+                    return (EOF == null) ? (EOF = tokenFactory.createFixed(Token.Kind.EOF, is.getLine(), is.getColumn())) : EOF;
                 }
                 if (isSpace(c)) {
                     continue;

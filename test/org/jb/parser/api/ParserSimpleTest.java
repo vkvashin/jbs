@@ -52,7 +52,7 @@ public class ParserSimpleTest extends ParserTestBase {
                 int idx = base + la;
                 if (idx < refTokens.length) {
                     Token tok = tb.LA(la);
-                    if (tok == null) {
+                    if (Token.isEOF(tok)) {
                         tok = tb.LA(la);
                     }
                     assertEquals(refTokens[idx], tok);

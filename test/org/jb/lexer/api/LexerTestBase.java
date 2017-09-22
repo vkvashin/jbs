@@ -30,7 +30,7 @@ public class LexerTestBase {
     protected Token[] lexAndGetTokenArray(String text) throws Exception {
         TokenStream ts = lex(text);
         ArrayList<Token> tokens = new ArrayList<>();
-        for (Token tok = ts.next(); tok != null; tok = ts.next()) {
+        for (Token tok = ts.next(); !Token.isEOF(tok); tok = ts.next()) {
             tokens.add(tok);
         }
         return tokens.toArray(new Token[tokens.size()]);
@@ -46,7 +46,7 @@ public class LexerTestBase {
 
     protected void printTokens(TokenStream ts) throws Exception {
         Token tok;
-        while((tok = ts.next()) != null) {
+        while(!Token.isEOF(tok = ts.next())) {
             System.out.println(tok);
         }        
     }

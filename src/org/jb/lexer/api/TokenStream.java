@@ -6,6 +6,8 @@ package org.jb.lexer.api;
  * @author vkvashin
  */
 public interface TokenStream {
-    /** @return next token or null if there are no tokens */
+    /** 
+     * @return next token or Token.EOF if there are no tokens 
+     */
     Token next() throws TokenStreamException;
 }

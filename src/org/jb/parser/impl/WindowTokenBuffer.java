@@ -41,7 +41,7 @@ public class WindowTokenBuffer extends TokenBuffer {
     private void fill() throws TokenStreamException {
         while (size < tokens.length) {
             Token tok = ts.next();
-            if (tok == null) {
+            if (Token.isEOF(tok)) {
                 break;
             } else {
                 tokens[size++] = tok;

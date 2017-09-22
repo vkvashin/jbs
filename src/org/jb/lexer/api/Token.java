@@ -34,7 +34,8 @@ public final class Token {
         REDUCE("reduce"),
         EQ("="),
         PRINT("print"),
-        OUT("out");
+        OUT("out"),
+        EOF("EOF");
 
         final String fixedText;
 
@@ -86,6 +87,14 @@ public final class Token {
     public CharSequence getText() {
         return text;
     }    
+    
+    public boolean isEOF() {
+        return getKind() == Kind.EOF;
+    }
+    
+    public static boolean isEOF(Token token) {
+        return (token == null/*paranoia*/) || token.getKind() == Kind.EOF;
+    }
 
     @Override
     public String toString() {

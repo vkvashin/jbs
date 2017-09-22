@@ -38,9 +38,9 @@ public class ParserImpl {
 
     private void skipToTheNextLine() {
         Token tok = LA(0);
-        if (tok != null) {
+        if (isEOF(tok)) {
             int line = tok.getLine();
-            while (tok != null && tok.getLine() == line) {
+            while (!isEOF(tok) && tok.getLine() == line) {
                 consume();
                 tok = LA(0);
             }
@@ -60,7 +60,7 @@ public class ParserImpl {
 
     private Statement statementImpl() throws SynaxError {
         Token tok = LA(0);
-        if (tok == null) {
+        if (isEOF(tok)) {
             return null; // TODO: consider a special EOF token
         }
         switch (tok.getKind()) {
@@ -79,7 +79,7 @@ public class ParserImpl {
         final Token firstTok = consumeExpected(Token.Kind.VAR);
         final Token nameTok = LA(0);
         consume(); // variable name
-        if (nameTok == null || nameTok.getKind() != Token.Kind.ID) {
+        if (isEOF(nameTok) || nameTok.getKind() != Token.Kind.ID) {
             throw new SynaxError(LA(0), "var keyword should be followed by name");
         }
         if (LA(0).getKind() != Token.Kind.EQ) {
@@ -150,7 +150,7 @@ public class ParserImpl {
 
     private Expr operand() throws SynaxError {
         final Token firstTok = LA(0);
-        if (firstTok == null) {
+        if (isEOF(firstTok)) {
             throw new SynaxError("unexpected end of file: expected expression");
         }
         switch (firstTok.getKind()) {
@@ -176,7 +176,7 @@ public class ParserImpl {
     }
 
     private boolean isOperation(Token tok) {
-        if (tok != null) {
+        if (!isEOF(tok)) {
             switch (tok.getKind()) {
                 case ADD:
                 case SUB:
@@ -284,7 +284,7 @@ public class ParserImpl {
      */
     private Token consumeExpected(Token.Kind kind) throws SynaxError {
         Token tok = LA(0);
-        if (tok == null || tok.getKind() != kind) {
+        if (isEOF(tok) || tok.getKind() != kind) {
             throw new SynaxError(tok, "expected " + getTokenKindName(kind));
         }
         consume();
@@ -311,7 +311,7 @@ public class ParserImpl {
     }
 
     /** just a conveniency shortcut */
-    private Token LA(int lookAhead) {
+    private Token LA(int lookAhead)  {
         // skip some erroneous tokens
         for (int i = 0; i < 10; i++) {
             try {
@@ -321,7 +321,7 @@ public class ParserImpl {
                 errorListener.error(ex);
             }
         }
-        return null;
+        return null; // TODO: return EOF or throw an exception
     }
 
     /** just a conveniency shortcut */
@@ -329,9 +329,12 @@ public class ParserImpl {
         tokens.consume();
     }
 
+    private boolean isEOF(Token tok) {
+        return Token.isEOF(tok);
+    }
     private boolean isEOF() {
         try {
-            return tokens.LA(0) == null;
+            return isEOF(tokens.LA(0));
         } catch (TokenStreamException ex) {
             return false;
         }
