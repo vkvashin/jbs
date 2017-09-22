@@ -1,14 +1,12 @@
 package org.jb.parser.impl;
 
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Deque;
-import java.util.List;
 import java.util.Stack;
 import org.jb.ast.api.DeclStatement;
 import org.jb.ast.api.*;
 import org.jb.lexer.api.*;
-import org.jb.parser.api.*;
+import org.jb.ast.diagnostics.DiagnosticListener;
 
 /**
  *
@@ -17,9 +15,9 @@ import org.jb.parser.api.*;
 public class ParserImpl {
 
     private final TokenBuffer tokens;
-    private final ParseErrorListener errorListener;
+    private final DiagnosticListener errorListener;
 
-    public ParserImpl(TokenStream ts, ParseErrorListener errorListener) throws TokenStreamException {
+    public ParserImpl(TokenStream ts, DiagnosticListener errorListener) throws TokenStreamException {
         tokens = new ZeroLookaheadTokenBuffer(ts); //WindowTokenBuffer(ts, 1, 4096);
         this.errorListener = errorListener;
     }
