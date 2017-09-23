@@ -19,4 +19,9 @@ public final class StringLiteral extends Literal {
     public NodeKind getNodeKind() {
         return NodeKind.STRING;
     }    
+
+    @Override
+    public Type getType() {
+        return Type.STRING;
+    }
 }

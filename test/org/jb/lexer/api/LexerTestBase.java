@@ -16,6 +16,7 @@ import org.jb.lexer.api.Token;
 import org.junit.Assert;
 import org.jb.lexer.api.TokenStream;
 import org.junit.After;
+import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 
 
@@ -28,21 +29,21 @@ public class LexerTestBase {
     private boolean debug = false;
     
     private final List<Diagnostic> diagnostics = new ArrayList<>();
-    private final DiagnosticListener diagnosticListener = new DiagnosticListener() {
-        DiagnosticListener defaultListener = new DefaultDiagnosticListener();                
+    private final DiagnosticListener diagnosticListener = new DiagnosticListener() { 
         @Override
         public void report(Diagnostic issue) {
-            defaultListener.report(issue);
+            DefaultDiagnosticListener.report(issue, System.err);
             diagnostics.add(issue);
         }
     };
-
+    
     public DiagnosticListener getTestDiagnosticListener() {
         return diagnosticListener;
     }
     
     @Before
     public void setUp() {
+        DefaultDiagnosticListener.setDefaultListener(diagnosticListener);
         diagnostics.clear();
         debug = false;
     }
@@ -52,11 +53,11 @@ public class LexerTestBase {
     }
     
     protected void assertEmptyDiagnostics() {
-        Assert.assertTrue(getDiagnostics().isEmpty());
+        Assert.assertTrue("Diagnostics should be empty", getDiagnostics().isEmpty());
     }
 
     protected void assertNonEmptyDiagnostics() {
-        Assert.assertTrue(!getDiagnostics().isEmpty());
+        Assert.assertTrue("Diagnostics should NOT be empty", !getDiagnostics().isEmpty());
     }
 
     protected TokenStream lex(String text) {
@@ -138,4 +139,31 @@ public class LexerTestBase {
             Assert.assertTrue("Tokens differ: expected " + expected + " but got " + actual, false);
         }
     }    
+    
+    protected void assertDiagnosticEquals(int index, int expectedLine, int expectedColumn, String expectedMessage) {
+        List<Diagnostic> diagnostics = getDiagnostics();
+        if (index < diagnostics.size()) {
+            Diagnostic d = diagnostics.get(index);
+            if (expectedLine >= 0 && d.getLine() != expectedLine) {
+                assertTrue("Diagnostic #" + index + " has wrong line, expected " + expectedLine + " but actual " + d.getLine(), false);
+            }
+            if (expectedColumn >= 0 && d.getColumn() != expectedColumn) {
+                assertTrue("Diagnostic #" + index + " has wrong column, expected " + expectedColumn + " but actual " + d.getColumn(), false);
+            }
+            if (expectedMessage != null) {
+                boolean equals;
+                if (expectedMessage.endsWith("*")) {
+                    equals = d.getMessage().toString().startsWith(expectedMessage.substring(0, expectedMessage.length()-1));
+                } else {
+                    equals = expectedMessage.contentEquals(d.getMessage());
+                }
+                if (!equals) {
+                    assertTrue("Diagnostic #" + index + " has wrong message, expected " + expectedMessage + " but actual " + d.getMessage(), false);
+                }
+            }
+        } else {
+            assertTrue("There should be at least " + index+1 + " diagnostics", false);
+        }
+    }
+    
 }

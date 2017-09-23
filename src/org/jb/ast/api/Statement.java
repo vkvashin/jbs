@@ -10,19 +10,7 @@ package org.jb.ast.api;
  * @author vkvashin
  */
 public abstract class Statement extends ASTNode {
-    
-    private Statement nextStatement;
-
     protected Statement(int line, int column) {
         super(line, column);
-    }
-
-    @Override
-    public Statement getNextSibling() {
-        return nextStatement;
-    }
-
-    public void setNextSibling(Statement nextSatement) {
-        this.nextStatement = nextSatement;
     }
 }

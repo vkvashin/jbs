@@ -19,4 +19,9 @@ public final class IntLiteral extends Literal {
     public NodeKind getNodeKind() {
         return NodeKind.INT;
     }    
+    
+    @Override
+    public Type getType() {
+        return Type.INT;
+    }
 }

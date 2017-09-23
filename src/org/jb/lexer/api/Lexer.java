@@ -15,7 +15,7 @@ public final class Lexer {
     private final LexerImpl lexer;
     
     public Lexer(InputStream is) {
-        this(is, new DefaultDiagnosticListener());
+        this(is, DefaultDiagnosticListener.getDefaultListener());
     }
 
     public Lexer(InputStream is, DiagnosticListener diagnosticListener) {

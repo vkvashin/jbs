@@ -19,4 +19,9 @@ public final class FloatLiteral extends Literal {
     public NodeKind getNodeKind() {
         return NodeKind.FLOAT;
     }    
+
+    @Override
+    public Type getType() {
+        return Type.FLOAT;
+    }
 }

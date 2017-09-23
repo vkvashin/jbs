@@ -25,6 +25,7 @@ public abstract class ASTNode {
 
     private final int line;
     private final int column;
+    private ASTNode next;
 
     protected ASTNode(int line, int column) {
         this.line = line;
@@ -39,9 +40,16 @@ public abstract class ASTNode {
         return column;
     }
     
+    public ASTNode getNextSibling() {
+        return next;
+    }
+
+    public void setNextSibling(ASTNode nextSatement) {
+        this.next = nextSatement;
+    }
+
     public abstract NodeKind getNodeKind();
     public abstract ASTNode getFirstChild();
-    public abstract ASTNode getNextSibling();
 
     @Override
     public String toString() {

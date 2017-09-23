@@ -4,6 +4,6 @@ package org.jb.ast.diagnostics;
  *
  * @author vkvashin
  */
-public interface DiagnosticListener {    
+public interface DiagnosticListener {
     void report(Diagnostic issue);    
 }

@@ -2,9 +2,13 @@ package org.jb.parser.impl;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.Stack;
+import java.util.Map;
+import java.util.TreeMap;
 import org.jb.ast.api.DeclStatement;
 import org.jb.ast.api.*;
+import org.jb.ast.diagnostics.DefaultDiagnosticListener;
 import org.jb.ast.diagnostics.Diagnostic;
 import org.jb.lexer.api.*;
 import org.jb.ast.diagnostics.DiagnosticListener;
@@ -17,10 +21,12 @@ public class ParserImpl {
 
     private final TokenBuffer tokens;
     private final DiagnosticListener errorListener;
+    private Symtab symtab;
 
     public ParserImpl(TokenStream ts, DiagnosticListener errorListener) throws TokenStreamException {
         tokens = new ZeroLookaheadTokenBuffer(ts); //WindowTokenBuffer(ts, 1, 4096);
         this.errorListener = errorListener;
+        symtab = new Symtab(null, false);
     }
 
     public Statement parse() {
@@ -88,7 +94,18 @@ public class ParserImpl {
         }
         consume();// =
         Expr expr = expression();
-        return new DeclStatement(firstTok.getLine(), firstTok.getColumn(), nameTok.getText(), expr);
+        Type type = expr.getType();
+        String name = nameTok.getText().toString();
+        symtab.put(name, type);
+        return new DeclStatement(firstTok.getLine(), firstTok.getColumn(), name, expr);
+    }
+
+    private DeclStatement lambdaVarDecl(Type type) throws SynaxError {        
+        final Token tok = LA(0);
+        assert tok.getKind() == Token.Kind.ID;
+        consume();
+        symtab.put(tok.getText().toString(), type);
+        return new DeclStatement(tok.getLine(), tok.getColumn(), tok.getText(), null);
     }
 
     private PrintStatement printStatement() throws SynaxError {
@@ -148,7 +165,7 @@ public class ParserImpl {
         int column = (firstTok == null) ? left.getColumn(): firstTok.getColumn();
         return new BinaryOpExpr(line, column, op, left, right);
     }
-
+    
     private Expr operand() throws SynaxError {
         final Token firstTok = LA(0);
         if (isEOF(firstTok)) {
@@ -233,7 +250,13 @@ public class ParserImpl {
         final Token tok = LA(0);
         assert tok.getKind() == Token.Kind.ID;
         consume();
-        return new IdExpr(tok.getText(), tok.getLine(), tok.getColumn());
+        String name = tok.getText().toString();
+        Type type = symtab.getType(name);
+        if (type == null) {
+            DefaultDiagnosticListener.getDefaultListener().report(Diagnostic.error(tok.getLine(), tok.getColumn(), "undeclared variable " + name));
+            type = Type.UNKNOWN;
+        }
+        return new IdExpr(name, tok.getLine(), tok.getColumn(), type);
     }
 
     private ParenExpr paren() throws SynaxError {
@@ -257,11 +280,17 @@ public class ParserImpl {
         consumeExpected(Token.Kind.LPAREN);
         Expr sequence = expression();
         consumeExpected(Token.Kind.COMMA);
-        IdExpr var = id();
+        DeclStatement var = lambdaVarDecl(Type.UNKNOWN);
         consumeExpected(Token.Kind.ARROW);
-        Expr transformation = expression();
-        consumeExpected(Token.Kind.RPAREN);
-        return new MapExpr(firstTok.getLine(), firstTok.getColumn(), sequence, var, transformation);
+        pushSymtab(false);
+        try {
+            symtab.put(var.getName().toString(), Type.INT);
+            Expr transformation = expression();
+            consumeExpected(Token.Kind.RPAREN);
+            return new MapExpr(firstTok.getLine(), firstTok.getColumn(), sequence, var, transformation);
+        } finally {
+            popSymtab();
+        }
     }
 
     private ReduceExpr reduce() throws SynaxError {
@@ -271,12 +300,19 @@ public class ParserImpl {
         consumeExpected(Token.Kind.COMMA);
         Expr defValue = expression();
         consumeExpected(Token.Kind.COMMA);
-        IdExpr prev = id();
-        IdExpr curr = id();
+        DeclStatement prev = lambdaVarDecl(Type.UNKNOWN);
+        DeclStatement curr = lambdaVarDecl(Type.UNKNOWN);
         consumeExpected(Token.Kind.ARROW);
-        Expr transformation = expression();
-        consumeExpected(Token.Kind.RPAREN);
-        return new ReduceExpr(firstTok.getLine(), firstTok.getColumn(), sequence, defValue, prev, curr, transformation);
+        pushSymtab(false);
+        try {       
+            symtab.put(prev.getName().toString(), Type.INT);
+            symtab.put(curr.getName().toString(), Type.INT);
+            Expr transformation = expression();
+            consumeExpected(Token.Kind.RPAREN);
+            return new ReduceExpr(firstTok.getLine(), firstTok.getColumn(), sequence, defValue, prev, curr, transformation);
+        } finally {
+            popSymtab();
+        }
     }
 
     /**
@@ -372,4 +408,47 @@ public class ParserImpl {
             }
         }
     }
+    
+    private void pushSymtab(boolean transitive) {
+        symtab =  new Symtab(symtab, transitive);
+    }
+    
+    private void popSymtab() {
+        assert symtab.previous != null;
+        symtab = symtab.previous;
+    }
+
+    private static class Symtab {
+
+        private boolean transitive;
+        private Symtab previous;
+        private Map<String, Type> data = new TreeMap<>();
+
+        public Symtab(Symtab previous, boolean transitive) {
+            this.transitive = transitive;
+            this.previous = previous;
+        }        
+
+        public boolean exists(String name) {
+            if (data.containsKey(name)) {
+                return true;
+            }
+            if (transitive && previous != null) {
+                return previous.exists(name);
+            }
+            return false;
+        }
+        
+        public Type getType(String name) {
+            Type type = data.get(name);
+            if (type == null && transitive && previous != null) {
+                type = previous.getType(name);
+            }
+            return type;
+        }
+
+        public void put(String name, Type type) {
+            data.put(name, type);
+        }
+    }   
 }

@@ -7,6 +7,8 @@ package org.jb.parser.api;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.List;
 import org.jb.ast.api.ASTNode;
 import org.jb.lexer.api.LexerTestBase;
 import org.jb.lexer.api.TokenStream;
@@ -85,14 +87,31 @@ public class ParserTestBase extends LexerTestBase {
         return ps.toString().split("\n");
     }
 
-    protected void doTestAST(String source, String[] expected) throws Exception {
+    protected void doTestAST(String source, String[] expected) throws Exception {        
+        ASTNode ast = getAst(source);
+        String[] actual = getAstDumpLines(ast);
+        if (expected != null) {
+            assertEquals("AST dump differs", expected, actual);
+        }
+    }
+
+    protected List<ASTNode> getAstAsList(String source) throws Exception {
+        ASTNode ast = getAst(source);
+        List<ASTNode> l = new ArrayList<>();
+        while (ast != null) {
+            l.add(ast);
+            ast = ast.getFirstChild();
+        }
+        return l;
+    }
+
+    protected ASTNode getAst(String source) throws Exception {
         TokenStream ts = lex(source);
         ASTNode ast = new Parser().parse(ts, getTestDiagnosticListener());
         if (isDebug()) {
             printAst(ast);
         }
-        String[] actual = getAstDumpLines(ast);
-        assertEquals("AST dump differs", expected, actual);
+        return ast;
     }
 
     protected void assertEquals(String message, String[] expected, String[] actual) {

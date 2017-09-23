@@ -13,23 +13,23 @@ public final class  ReduceExpr extends Expr {
 
     private final Expr sequence;
     private final Expr defValue;
-    private final IdExpr prev;
-    private final IdExpr curr;
+    private final DeclStatement prev;
+    private final DeclStatement curr;
     private final Expr transformation;
 
-    public ReduceExpr(int line, int column, Expr sequence, Expr defValue, IdExpr prev, IdExpr curr, Expr transformation) {
+    public ReduceExpr(int line, int column, Expr sequence, Expr defValue, DeclStatement prev, DeclStatement curr, Expr transformation) {
         super(line, column);
         this.sequence = sequence;
         this.defValue = defValue;
         this.prev = prev;
         this.curr = curr;
         this.transformation = transformation;
-        chainExpressions(this.sequence, this.defValue, this.prev, this.curr, this.transformation);
+        chainNodes(this.sequence, this.defValue, this.prev, this.curr, this.transformation);
     }
 
     @Override
     public NodeKind getNodeKind() {
-        return NodeKind.MAP;
+        return NodeKind.REDUCE;
     }
 
     @Override
@@ -45,4 +45,9 @@ public final class  ReduceExpr extends Expr {
     public String toString() {
         return super.toString(); // + toString(defValue, prev, curr, transformation);
     }
+
+    @Override
+    public Type getType() {
+        return transformation.getType();
+    }    
 }

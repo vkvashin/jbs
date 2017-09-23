@@ -12,10 +12,12 @@ package org.jb.ast.api;
 public final class IdExpr extends Expr {
 
     private final CharSequence name;
+    private final Type type;
 
-    public IdExpr(CharSequence name, int line, int column) {
+    public IdExpr(CharSequence name, int line, int column, Type type) {
         super(line, column);
         this.name = name;
+        this.type = type;
     }
 
     public CharSequence getName() {
@@ -36,4 +38,9 @@ public final class IdExpr extends Expr {
     public String toString() {
         return super.toString() + name;
     }
+
+    @Override
+    public Type getType() {
+        return type;
+    }    
 }

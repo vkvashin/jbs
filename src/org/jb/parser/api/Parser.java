@@ -16,7 +16,7 @@ import org.jb.ast.diagnostics.DiagnosticListener;
 public final class Parser {
     
     public ASTNode parse(TokenStream ts) throws TokenStreamException {
-        return parse(ts, new DefaultDiagnosticListener());
+        return parse(ts, DefaultDiagnosticListener.getDefaultListener());
     }
 
     public ASTNode parse(TokenStream ts, DiagnosticListener errorListener) throws TokenStreamException {

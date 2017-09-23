@@ -11,25 +11,16 @@ package org.jb.ast.api;
  */
 public abstract class Expr extends ASTNode {
 
-    private Expr nextExpr;
-
     protected Expr(int line, int column) {
         super(line, column);
     }
 
-    public final void setNextSibling(Expr nextSibling) {
-        this.nextExpr = nextSibling;
-    }
+    public abstract Type getType();
 
-    @Override
-    public final ASTNode getNextSibling() {
-        return nextExpr;
-    }
-
-    protected static void chainExpressions(Expr... exps) {
-        for (int i = 0; i < exps.length; i++) {
-            if (exps[i] != null) {
-                exps[i].setNextSibling(i + 1 < exps.length ? exps[i + 1] : null);
+    protected static void chainNodes(ASTNode... nodes) {
+        for (int i = 0; i < nodes.length; i++) {
+            if (nodes[i] != null) {
+                nodes[i].setNextSibling(i + 1 < nodes.length ? nodes[i + 1] : null);
             }
         }
     }

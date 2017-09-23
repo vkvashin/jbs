@@ -111,7 +111,7 @@ public class ParserSimpleTest extends ParserTestBase {
     public void testSimplestErrorProcessing() throws Exception {
         String source =
                 "var x = 5.4.3\n" + // lexer error
-                "var y = 3.14\n" +
+                "var y = 3\n" +
                 "var w = y + 1\n" +
                 "123 some shit 456\n" + // parser error
                 "print \"x = \"\n" +
@@ -121,7 +121,7 @@ public class ParserSimpleTest extends ParserTestBase {
             "DECL [1:1] x",
             "    FLOAT [1:9] 5.4",
             "DECL [2:1] y",
-            "    FLOAT [2:9] 3.14",
+            "    INT [2:9] 3",
             "DECL [3:1] w",
             "    OP [3:9] +",
             "        ID [3:9] y",
@@ -139,25 +139,16 @@ public class ParserSimpleTest extends ParserTestBase {
         assertDiagnosticEquals(1, 4, 1, "Syntax error in 4:1: unexpected token 123");
         assertDiagnosticEquals(2, 8, 1, "unterminated string");        
     }
-    
-    protected void assertDiagnosticEquals(int index, int line, int column, String message) {
-        List<Diagnostic> diagnostics = getDiagnostics();
-        if (index < diagnostics.size()) {
-            Diagnostic d = diagnostics.get(index);
-            if (line >= 0 && d.getLine() != line) {
-                assertTrue("Diagnostic #" + index + " has wrong line, expected " + line + " but actual " + d.getLine(), false);
-            }
-            if (column >= 0 && d.getColumn() != column) {
-                assertTrue("Diagnostic #" + index + " has wrong column, expected " + column + " but actual " + d.getColumn(), false);
-            }
-            if (message != null && ! message.contentEquals(d.getMessage())) {
-                assertTrue("Diagnostic #" + index + " has wrong message, expected " + message + " but actual " + d.getMessage(), false);
-            }
-        } else {
-            assertTrue("There should be at least " + index+1 + "diagnostics", false);
-        }
+
+    @Test
+    public void testTypeErrorProcessing() throws Exception {
+        String source =
+                "var x = 1 + 2.7\n" + 
+                "var y = 3.14 + \"asdf\"\n";
+        setDebug(true);
+        doTestAST(source, null);
+        assertNonEmptyDiagnostics();
     }
-    
     
     @Test
     public void testParsePrecedenceMulAdd() throws Exception {
@@ -194,6 +185,29 @@ public class ParserSimpleTest extends ParserTestBase {
     }
 
     @Test
+    public void testSimpleMap() throws Exception {
+        String source
+                = "var n = 500\n"
+                + "var sequence = map({0, n}, i -> i*2)\n";
+        String[] expected = new String[]{
+            "DECL [1:1] n",
+            "    INT [1:9] 500",
+            "DECL [2:1] sequence",
+            "    MAP [2:16] ",
+            "        SEQ [2:20] ",
+            "            INT [2:21] 0",
+            "            ID [2:24] n",
+            "        DECL [2:28] i",
+            "        OP [2:33] *",
+            "            ID [2:33] i",
+            "            INT [2:35] 2"
+        };
+        setDebug(true);
+        doTestAST(source, expected);
+        assertEmptyDiagnostics();
+    }
+
+    @Test
     public void testParserFromTZ() throws Exception {
         String source =
             "var n = 500\n" +
@@ -209,7 +223,7 @@ public class ParserSimpleTest extends ParserTestBase {
             "        SEQ [2:20] ",
             "            INT [2:21] 0",
             "            ID [2:24] n",
-            "        ID [2:28] i",
+            "        DECL [2:28] i",
             "        OP [2:33] /",
             "            OP [2:33] ^",
             "                PAREN [2:33] ",
@@ -224,11 +238,11 @@ public class ParserSimpleTest extends ParserTestBase {
             "DECL [3:1] pi",
             "    OP [3:10] *",
             "        INT [3:10] 4",
-            "        MAP [3:14] ",
+            "        REDUCE [3:14] ",
             "            ID [3:21] sequence",
             "            INT [3:31] 0",
-            "            ID [3:34] x",
-            "            ID [3:36] y",
+            "            DECL [3:34] x",
+            "            DECL [3:36] y",
             "            OP [3:41] +",
             "                ID [3:41] x",
             "                ID [3:45] y",

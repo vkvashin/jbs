@@ -44,4 +44,9 @@ public final class SeqExpr extends Expr {
     public String toString() {
         return super.toString(); // + toString(first, last);
     }
+    
+    @Override
+    public Type getType() {
+        return Type.SEQUENCE;
+    }    
 }

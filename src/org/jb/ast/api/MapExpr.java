@@ -12,15 +12,15 @@ package org.jb.ast.api;
 public final class  MapExpr extends Expr {
 
     private final Expr sequence;
-    private final IdExpr var;
+    private final DeclStatement var;
     private final Expr transformation;
 
-    public MapExpr(int line, int column, Expr sequence, IdExpr var, Expr transformation) {
+    public MapExpr(int line, int column, Expr sequence, DeclStatement var, Expr transformation) {
         super(line, column);
         this.sequence = sequence;
         this.var = var;
         this.transformation = transformation;
-        chainExpressions(this.sequence, this.var, this.transformation);
+        chainNodes(this.sequence, this.var, this.transformation);
     }
 
     @Override
@@ -37,7 +37,7 @@ public final class  MapExpr extends Expr {
         return sequence;
     }
 
-    public IdExpr getVar() {
+    public DeclStatement getVar() {
         return var;
     }
 
@@ -48,5 +48,10 @@ public final class  MapExpr extends Expr {
     @Override
     public String toString() {
         return super.toString(); // + toString(sequence, var, transformation);
+    }
+    
+    @Override
+    public Type getType() {
+        return Type.SEQUENCE;
     }
 }

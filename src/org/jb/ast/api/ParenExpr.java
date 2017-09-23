@@ -6,7 +6,7 @@
 package org.jb.ast.api;
 
 /**
- *
+ * Parenthesis expression
  * @author vkvashin
  */
 public final class ParenExpr extends Expr {
@@ -31,5 +31,10 @@ public final class ParenExpr extends Expr {
     @Override
     public String toString() {
         return super.toString(); // + expr;
+    }
+
+    @Override
+    public Type getType() {
+        return expr.getType();
     }
 }
