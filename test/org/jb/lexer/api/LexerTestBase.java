@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.List;
 import org.*;
 import org.*;
+import org.jb.ast.api.Type;
 import org.jb.ast.diagnostics.DefaultDiagnosticListener;
 import org.jb.ast.diagnostics.Diagnostic;
 import org.jb.ast.diagnostics.DiagnosticListener;
@@ -131,6 +132,12 @@ public class LexerTestBase {
         return res;
     }
         
+    protected void assertTypeEquals(Type expected, Type actual) {
+        if (expected != actual) {
+            Assert.assertTrue("Types differ: expected " + expected + " but got " + actual, false);
+        }
+    }
+
     protected void assertEquals(Token expected, Token actual) {
         if (expected.getKind() != actual.getKind()
                 || expected.getColumn() != actual.getColumn()

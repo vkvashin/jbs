@@ -88,11 +88,8 @@ public final class BinaryOpExpr extends Expr {
     private Type calculateType(boolean reportError) {
         final Type leftType = left.getType();
         final Type rightType = right.getType();
-        switch (rightType) {
-            case UNKNOWN:
-                return Type.UNKNOWN;
-            case ERRONEOUS:
-                return Type.ERRONEOUS;
+        if(rightType == Type.ERRONEOUS) {
+            return Type.ERRONEOUS;
         }
         switch (leftType) {
             case INT:
@@ -118,7 +115,8 @@ public final class BinaryOpExpr extends Expr {
                         }
                         return Type.ERRONEOUS;
                 }
-            case SEQUENCE:
+            case SEQ_INT:
+            case SEQ_FLOAT:
             case STRING:
                 if (reportError) {
                     reportError("operation " + opKind.getShortDisplayName() + " can not be applied to " + leftType.getDisplayName());
@@ -126,8 +124,6 @@ public final class BinaryOpExpr extends Expr {
                 return Type.ERRONEOUS;
             case ERRONEOUS:
                 return Type.ERRONEOUS;
-            case UNKNOWN:
-                return Type.UNKNOWN;
             default:
                 throw new AssertionError(leftType.name());
         }

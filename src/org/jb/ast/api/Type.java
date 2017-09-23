@@ -7,10 +7,9 @@ package org.jb.ast.api;
 public enum Type {
     INT("integer"),
     FLOAT("float"),
-    SEQUENCE("sequence"),
+    SEQ_INT("integer sequence"),
+    SEQ_FLOAT("float sequence"),
     STRING("sequence"),
-    /** It's a temporary workaround and should be removed */
-    UNKNOWN("unknown"),
     ERRONEOUS("erroneous");
 
     private final String displayName;

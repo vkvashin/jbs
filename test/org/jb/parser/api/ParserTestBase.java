@@ -88,7 +88,10 @@ public class ParserTestBase extends LexerTestBase {
     }
 
     protected void doTestAST(String source, String[] expected) throws Exception {        
-        ASTNode ast = getAst(source);
+        doTestAST(getAst(source), expected);
+    }
+
+    protected void doTestAST(ASTNode ast, String[] expected) throws Exception {        
         String[] actual = getAstDumpLines(ast);
         if (expected != null) {
             assertEquals("AST dump differs", expected, actual);
@@ -96,11 +99,14 @@ public class ParserTestBase extends LexerTestBase {
     }
 
     protected List<ASTNode> getAstAsList(String source) throws Exception {
-        ASTNode ast = getAst(source);
+        return getAstAsList(getAst(source));
+    }
+
+    protected List<ASTNode> getAstAsList(ASTNode ast) throws Exception {
         List<ASTNode> l = new ArrayList<>();
         while (ast != null) {
             l.add(ast);
-            ast = ast.getFirstChild();
+            ast = ast.getNextSibling();
         }
         return l;
     }

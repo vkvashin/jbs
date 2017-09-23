@@ -11,6 +11,9 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 import org.jb.ast.api.ASTNode;
+import org.jb.ast.api.DeclStatement;
+import org.jb.ast.api.Expr;
+import org.jb.ast.api.Type;
 import org.jb.ast.diagnostics.Diagnostic;
 import org.jb.lexer.api.Token;
 import org.jb.lexer.api.TokenStreamException;
@@ -67,25 +70,32 @@ public class ParserTypeTest extends ParserTestBase {
     }
 
     @Test
-    public void testSimpleMap() throws Exception {
+    public void testSimpleIntMap() throws Exception {
         String source
                 = "var n = 500\n"
                 + "var sequence = map({0, n}, i -> i*2)\n";
-        String[] expected = new String[]{
-            "DECL [1:1] n",
-            "    INT [1:9] 500",
-            "DECL [2:1] sequence",
-            "    MAP [2:16] ",
-            "        SEQ [2:20] ",
-            "            INT [2:21] 0",
-            "            ID [2:24] n",
-            "        DECL [2:28] i",
-            "        OP [2:33] *",
-            "            ID [2:33] i",
-            "            INT [2:35] 2"
-        };
         setDebug(true);
-        doTestAST(source, expected);
+        List<ASTNode> ast = getAstAsList(source);
+        doTestAST(ast.get(0), null);
         assertEmptyDiagnostics();
+        DeclStatement decl = (DeclStatement) ast.get(1);
+        Expr init = decl.getInitializer();
+        Type type = init.getType();
+        assertTypeEquals(type.SEQ_INT, type);
     }
+    
+    @Test
+    public void testSimpleFloatMap() throws Exception {
+        String source
+                = "var n = 500\n"
+                + "var sequence = map({0, n}, i -> i*0.1)\n";
+        setDebug(true);
+        List<ASTNode> ast = getAstAsList(source);
+        doTestAST(ast.get(0), null);
+        assertEmptyDiagnostics();
+        DeclStatement decl = (DeclStatement) ast.get(1);
+        Expr init = decl.getInitializer();
+        Type type = init.getType();
+        assertTypeEquals(type.SEQ_FLOAT, type);
+    }    
 }

@@ -185,7 +185,7 @@ public class ParserSimpleTest extends ParserTestBase {
     }
 
     @Test
-    public void testSimpleMap() throws Exception {
+    public void testSimpleMap1() throws Exception {
         String source
                 = "var n = 500\n"
                 + "var sequence = map({0, n}, i -> i*2)\n";
@@ -206,6 +206,37 @@ public class ParserSimpleTest extends ParserTestBase {
         doTestAST(source, expected);
         assertEmptyDiagnostics();
     }
+    
+    @Test
+    public void testSimpleMap2() throws Exception {
+        String source =
+            "var n = 500\n" +
+            "var sequence = map({0, n}, i -> (-1)^i / (2.0 * i + 1))\n";
+        String[] expected = new String[] {
+            "DECL [1:1] n",
+            "    INT [1:9] 500",
+            "DECL [2:1] sequence",
+            "    MAP [2:16] ",
+            "        SEQ [2:20] ",
+            "            INT [2:21] 0",
+            "            ID [2:24] n",
+            "        DECL [2:28] i",
+            "        OP [2:33] /",
+            "            OP [2:33] ^",
+            "                PAREN [2:33] ",
+            "                    INT [2:34] -1",
+            "                ID [2:38] i",
+            "            PAREN [2:42] ",
+            "                OP [2:43] +",
+            "                    OP [2:43] *",
+            "                        FLOAT [2:43] 2.0",
+            "                        ID [2:49] i",
+            "                    INT [2:53] 1"
+        };
+        //setDebug(true);
+        doTestAST(source, expected);
+        assertEmptyDiagnostics();
+    }    
 
     @Test
     public void testParserFromTZ() throws Exception {

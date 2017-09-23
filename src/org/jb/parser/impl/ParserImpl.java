@@ -254,7 +254,7 @@ public class ParserImpl {
         Type type = symtab.getType(name);
         if (type == null) {
             DefaultDiagnosticListener.getDefaultListener().report(Diagnostic.error(tok.getLine(), tok.getColumn(), "undeclared variable " + name));
-            type = Type.UNKNOWN;
+            type = Type.ERRONEOUS;
         }
         return new IdExpr(name, tok.getLine(), tok.getColumn(), type);
     }
@@ -275,19 +275,42 @@ public class ParserImpl {
         return new SeqExpr(firstTok.getLine(), firstTok.getColumn(), first, last);
     }
 
+    /** returns type of an element in sequence */
+    private Type seqElementType(Expr seq, boolean reportErrors) {
+        Type seqType = seq.getType();
+        switch (seqType) {
+            case SEQ_INT:
+                return Type.INT;
+            case SEQ_FLOAT:
+                return Type.FLOAT;
+            case INT:
+            case FLOAT:
+            case STRING:
+                if (reportErrors) {
+                    error(seq, "wrong type: " + seqType.getDisplayName() + ", expected sequence");
+                }
+                return Type.ERRONEOUS;
+            case ERRONEOUS:
+                return Type.ERRONEOUS;
+            default:
+                throw new AssertionError(seqType.name());
+        }
+    }
+
     private MapExpr map() throws SynaxError {
         final Token firstTok = consumeExpected(Token.Kind.MAP);
         consumeExpected(Token.Kind.LPAREN);
-        Expr sequence = expression();
+        Expr seq = expression();
+        Type varType = seqElementType(seq, true);
         consumeExpected(Token.Kind.COMMA);
-        DeclStatement var = lambdaVarDecl(Type.UNKNOWN);
+        DeclStatement var = lambdaVarDecl(varType);
         consumeExpected(Token.Kind.ARROW);
         pushSymtab(false);
         try {
             symtab.put(var.getName().toString(), Type.INT);
             Expr transformation = expression();
             consumeExpected(Token.Kind.RPAREN);
-            return new MapExpr(firstTok.getLine(), firstTok.getColumn(), sequence, var, transformation);
+            return new MapExpr(firstTok.getLine(), firstTok.getColumn(), seq, var, transformation);
         } finally {
             popSymtab();
         }
@@ -296,12 +319,13 @@ public class ParserImpl {
     private ReduceExpr reduce() throws SynaxError {
         final Token firstTok = consumeExpected(Token.Kind.REDUCE);
         consumeExpected(Token.Kind.LPAREN);
-        Expr sequence = expression();
+        Expr seq = expression();
+        Type varType = seqElementType(seq, true);
         consumeExpected(Token.Kind.COMMA);
         Expr defValue = expression();
         consumeExpected(Token.Kind.COMMA);
-        DeclStatement prev = lambdaVarDecl(Type.UNKNOWN);
-        DeclStatement curr = lambdaVarDecl(Type.UNKNOWN);
+        DeclStatement prev = lambdaVarDecl(varType);
+        DeclStatement curr = lambdaVarDecl(varType);
         consumeExpected(Token.Kind.ARROW);
         pushSymtab(false);
         try {       
@@ -309,7 +333,7 @@ public class ParserImpl {
             symtab.put(curr.getName().toString(), Type.INT);
             Expr transformation = expression();
             consumeExpected(Token.Kind.RPAREN);
-            return new ReduceExpr(firstTok.getLine(), firstTok.getColumn(), sequence, defValue, prev, curr, transformation);
+            return new ReduceExpr(firstTok.getLine(), firstTok.getColumn(), seq, defValue, prev, curr, transformation);
         } finally {
             popSymtab();
         }
@@ -375,6 +399,14 @@ public class ParserImpl {
 
     private static Diagnostic toDiagnostic(SynaxError err) {
         return Diagnostic.error(err.getLine(), err.getColumn(), err.getLocalizedMessage());
+    }
+    
+    private void error(ASTNode node, String message) {
+        errorListener.report(Diagnostic.error(node.getLine(), node.getColumn(), message));
+    }
+
+    private void error(int line, int column, String message) {
+        errorListener.report(Diagnostic.error(line, column, message));
     }
 
     private static class SynaxError extends Exception {

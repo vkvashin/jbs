@@ -52,6 +52,20 @@ public final class  MapExpr extends Expr {
     
     @Override
     public Type getType() {
-        return Type.SEQUENCE;
+        Type exprType = transformation.getType();
+        switch (exprType) {            
+            case INT:
+                return Type.SEQ_INT;
+            case FLOAT:
+                return Type.SEQ_FLOAT;
+            case SEQ_INT:
+            case SEQ_FLOAT:
+            case STRING:
+            case ERRONEOUS:
+                return Type.ERRONEOUS;
+            default:
+                throw new AssertionError(exprType.name());
+        }
     }
 }
+

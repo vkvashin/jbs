@@ -47,6 +47,6 @@ public final class SeqExpr extends Expr {
     
     @Override
     public Type getType() {
-        return Type.SEQUENCE;
+        return Type.SEQ_INT;
     }    
 }
