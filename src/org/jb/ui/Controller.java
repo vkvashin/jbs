@@ -5,11 +5,15 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.SwingUtilities;
 import org.jb.ast.api.ASTNode;
+import org.jb.ast.diagnostics.Diagnostic;
+import org.jb.ast.diagnostics.DiagnosticListener;
 import org.jb.lexer.api.Lexer;
 import org.jb.lexer.api.TokenStream;
 import org.jb.lexer.api.TokenStreamException;
@@ -28,11 +32,17 @@ import org.jb.parser.api.Parser;
     
     private final ThreadPoolExecutor foregroundExecutor;
     private final BlockingQueue<Runnable> foregroundQueue;    
-    private volatile Future<?> currentTask;
-
+    private volatile Future<?> currentForegroundTask;
+    
+    private final ThreadPoolExecutor backgroundExecutor;
+    private final BlockingQueue<Runnable> backgroundQueue;    
+    private volatile Future<?> currentBackgroundTask;
+            
     public Controller() {
         foregroundQueue = new ArrayBlockingQueue(1000);
         foregroundExecutor = new ThreadPoolExecutor(1, 1, 30, TimeUnit.SECONDS, foregroundQueue);
+        backgroundQueue = new ArrayBlockingQueue(1000);
+        backgroundExecutor = new ThreadPoolExecutor(1, 1, 30, TimeUnit.SECONDS, backgroundQueue);
     }
 
     public void init(EditorWindow editorWindow, OutputWindow outputWindow) {
@@ -58,7 +68,7 @@ import org.jb.parser.api.Parser;
         outputWindow.clear();
         foregroundTaskStarted();
         final String src = editorWindow.getText();
-        currentTask = foregroundExecutor.submit(new Runnable() {
+        currentForegroundTask = foregroundExecutor.submit(new Runnable() {
             @Override
             public void run() {
                 showAstInOutputWindowImpl(src);
@@ -82,9 +92,48 @@ import org.jb.parser.api.Parser;
             outputWindow.printErr(ex.getLocalizedMessage());
         }
     }
-    
+
+    /** 
+     * Schedules a syntax check of text in editor.
+     * If previous check has been scheduled, it will be canceled.
+     */
+    public void scheduleSyntaxCheck(final String source, final int updateId) {
+        Future<?> prev = currentBackgroundTask;
+        if (prev != null) {
+            prev.cancel(true);
+        }
+        currentBackgroundTask = backgroundExecutor.submit(new Runnable() {
+            @Override
+            public void run() {
+                syntaxCheck(source, updateId);
+            }
+        });
+    }
+
+    private void syntaxCheck(String source, final int updateId) {
+        final List<Diagnostic> diagnostics = new ArrayList<>();
+        DiagnosticListener diagnosticListener = new DiagnosticListener() {
+            @Override
+            public void report(Diagnostic issue) {
+                diagnostics.add(issue);
+            }
+        };
+        try {
+            InputStream is = getInputStream(source);
+            Lexer lexer = new Lexer(is, diagnosticListener);
+            TokenStream ts = lexer.lex();
+            Parser parser = new Parser();
+            parser.parse(ts, diagnosticListener);
+        } catch (UnsupportedEncodingException ex) {
+            outputWindow.printErr(ex.getLocalizedMessage());
+        } catch (TokenStreamException ex) {
+            outputWindow.printErr(ex.getLocalizedMessage());
+        }
+        editorWindow.underlineErrors(diagnostics, updateId);
+    }
+
     public void stopForegroundTask() {
-        Future<?> task = currentTask;
+        Future<?> task = currentForegroundTask;
         if (task != null) {
             task.cancel(true);
         }
