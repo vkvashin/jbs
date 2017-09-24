@@ -191,9 +191,9 @@ public class EvaluatorImpl {
             case SEQ:
                 return evaluateSequence((SeqExpr) expr);
             case MAP:
-                throw new UnsupportedOperationException("Map is not supported yet");
+                return evaluateMap((MapExpr)expr);
             case REDUCE:
-                throw new UnsupportedOperationException("reduce is not supported yet");
+                return evaluateReduce((ReduceExpr)expr);
             case STRING:
             case DECL:
             case OUT:
@@ -202,6 +202,101 @@ public class EvaluatorImpl {
                 error(expr, "can not evaluate node: " + expr.getType());
                 return Value.ERROR;
         }
+    }
+    
+    private Value evaluateMap(MapExpr expr) {
+        Expr seqExpr = expr.getSequence();
+        DeclStatement var = expr.getVar();
+        Expr transformation = expr.getTransformation();
+        // if either of the below is null, this should have already been reported
+        if (seqExpr != null && var != null && transformation != null) {
+            Value seqValue = evaluate(seqExpr);
+            Type type = seqValue.getType();
+            switch (type) {
+                case SEQ_INT:
+                    return evaluateMap(seqValue.getIntArray(), var, transformation);
+                case SEQ_FLOAT:
+                    throw new UnsupportedOperationException("float map is not supported yet");
+                case ERRONEOUS:
+                    return Value.ERROR;
+                case INT:
+                case FLOAT:
+                case STRING:
+                default:
+                    error(expr, "unexpected type, expected sequence, but got " + type);
+                    return Value.ERROR;
+            }
+        }
+        return Value.ERROR;
+    }
+
+    private class IntMapVariable extends Variable {
+        private final int[] data;
+        private int index;
+        public IntMapVariable(String name, DeclStatement declaration, int[] data) {
+            super(name, declaration);
+            this.data = data;
+            index = 0;
+        }
+        @Override
+        public Value getValue() {
+            return new Value(data[index]);
+        }
+        public void next() {
+            index++;
+        }
+        public int index() {
+            return index;
+        }
+        public boolean hasNext() {
+            return index < data.length;
+        }
+    }
+
+    private Value evaluateMap(int[] array, DeclStatement varDecl, Expr transformation) {
+        String name = varDecl.getName().toString();
+        IntMapVariable mapVar = new IntMapVariable(name, varDecl, array);        
+        pushSymtab(false);
+        symtab.put(name, mapVar);
+        try {
+            int[] intOut = new int[array.length];
+            float[] floatOut = null;
+            while (mapVar.hasNext()) {
+                Value v = evaluate(transformation);
+                Type type = v.getType();
+                switch (type) {                    
+                    case INT:
+                        intOut[mapVar.index()] = v.getInt();
+                        break;
+                    case FLOAT:
+                        if (floatOut == null) {
+                            floatOut = new float[intOut.length];
+                            for (int i = 0; i < mapVar.index(); i++) {
+                                floatOut[i] = (float) intOut[i];
+                            }
+                            intOut = null;
+                        }
+                        floatOut[mapVar.index()] = v.getFloat();
+                        break;
+                    case ERRONEOUS:
+                        return Value.ERROR;
+                    case SEQ_INT:
+                    case SEQ_FLOAT:
+                    case STRING:
+                    default:
+                        error(transformation, "unexpected type: " + type);
+                        return Value.ERROR;
+                }
+                mapVar.next();
+            }
+            return (floatOut == null) ? new Value(intOut) : new Value(floatOut);
+        } finally {
+            popSymtab();
+        }
+    }
+
+    private Value evaluateReduce(ReduceExpr expr) {
+        throw new UnsupportedOperationException("reduce is not supported yet");        
     }
 
     private Value evaluateSequence(SeqExpr expr) {
@@ -485,7 +580,6 @@ public class EvaluatorImpl {
     private class Variable {
 
         private final String name;
-        //private Type type;
         private final DeclStatement decl;
         private Value value;
         private boolean cached;
