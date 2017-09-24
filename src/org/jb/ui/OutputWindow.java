@@ -1,6 +1,7 @@
 package org.jb.ui;
 
 import java.awt.*;
+import java.io.IOException;
 import javax.swing.*;
 import javax.swing.text.*;
 import java.util.logging.Level;
@@ -68,6 +69,28 @@ import org.jb.ast.diagnostics.DiagnosticListener;
         }
     }
     
+    public Appendable getOutputAsAppendable() {
+        return new Appendable() {
+            @Override
+            public Appendable append(CharSequence text) throws IOException {
+                printOut(text);
+                return this;
+            }
+
+            @Override
+            public Appendable append(CharSequence text, int start, int end) throws IOException {
+                printOut(text.subSequence(start, end));
+                return this;
+            }
+
+            @Override
+            public Appendable append(char c) throws IOException {
+                printOut("" + c); // ineffective, but I'm sure nobody uses it
+                return this;
+            }
+        };
+    }
+
     public void printOut(final CharSequence... text) {
         if (SwingUtilities.isEventDispatchThread()) {
             printOutImpl(text);
@@ -106,7 +129,7 @@ import org.jb.ast.diagnostics.DiagnosticListener;
             for (CharSequence part : text) {
                 doc.insertString(doc.getLength(), part.toString(), null);
             }
-            doc.insertString(doc.getLength(), "\n", null);
+            //doc.insertString(doc.getLength(), "\n", null);
         } catch (BadLocationException ex) {
             Logger.getLogger(OutputWindow.class.getName()).log(Level.SEVERE, null, ex);
         }

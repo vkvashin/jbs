@@ -14,6 +14,7 @@ import javax.swing.SwingUtilities;
 import org.jb.ast.api.ASTNode;
 import org.jb.ast.diagnostics.Diagnostic;
 import org.jb.ast.diagnostics.DiagnosticListener;
+import org.jb.evaluator.api.Evaluator;
 import org.jb.lexer.api.Lexer;
 import org.jb.lexer.api.TokenStream;
 import org.jb.lexer.api.TokenStreamException;
@@ -89,9 +90,39 @@ import org.jb.parser.api.Parser;
             ASTNode ast = parser.parse(ts, outputWindow.getDiagnosticListener());
             AstPrinter printer = new AstPrinter();            
             printer.printAst(ast);
-        } catch (UnsupportedEncodingException ex) {
+        } catch (UnsupportedEncodingException | TokenStreamException ex) {
             outputWindow.printErr(ex.getLocalizedMessage());
-        } catch (TokenStreamException ex) {
+        }
+    }
+
+    /**
+     * asynchronously parses the text from editor and interprets AST
+     */
+    public void runAst() {
+        assert SwingUtilities.isEventDispatchThread();
+        outputWindow.clear();
+        foregroundTaskStarted();
+        final String src = editorWindow.getText();
+        currentForegroundTask = foregroundExecutor.submit(new Runnable() {
+            @Override
+            public void run() {
+                runAstImpl(src);
+                foregroundTaskFinished();
+            }
+        });
+    }
+
+    private void runAstImpl(String src) {
+        try {
+            InputStream is = getInputStream(src);
+            Lexer lexer = new Lexer(is, outputWindow.getDiagnosticListener());
+            TokenStream ts = lexer.lex();
+            Parser parser = new Parser();
+            ASTNode ast = parser.parse(ts, outputWindow.getDiagnosticListener());
+            Evaluator evaluator = new Evaluator(
+                    outputWindow.getOutputAsAppendable(), outputWindow.getDiagnosticListener());
+            evaluator.execute(ast);
+        } catch (UnsupportedEncodingException | TokenStreamException ex) {
             outputWindow.printErr(ex.getLocalizedMessage());
         }
     }
@@ -196,7 +227,7 @@ import org.jb.parser.api.Parser;
 
         public void printAst(ASTNode ast) {
             while (ast != null) {
-                outputWindow.printOut(indentBuffer.toString(), toString(ast).toString());
+                outputWindow.printOut(indentBuffer.toString(), toString(ast).toString(), "\n");
                 ASTNode firstChild = ast.getFirstChild();
                 if (firstChild != null) {
                     indent();

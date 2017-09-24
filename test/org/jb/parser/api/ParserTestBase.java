@@ -140,7 +140,13 @@ public class ParserTestBase extends LexerTestBase {
     protected void assertEquals(String message, String[] expected, String[] actual) {
         for (int i = 0; i < expected.length; i++) {
             if (i < actual.length) {
-                if (!expected[i].equals(actual[i])) {
+                boolean equal;
+                if (expected[i].endsWith("*")) {
+                    equal = actual[i].startsWith(expected[i].substring(0, expected[i].length()-1));
+                } else {
+                    equal = expected[i].equals(actual[i]);
+                }                
+                if (!equal) {
                     assertAndPrint(message + ": line " + i + " differs: expected vs actual is\n" + expected[i] + "\n" + actual[i], actual);
                 }
             } else {

@@ -52,6 +52,7 @@ public class Actions {
         }
         @Override
         public void actionPerformed(ActionEvent e) {
+            Controller.getInstance().runAst();
         }
     }
     

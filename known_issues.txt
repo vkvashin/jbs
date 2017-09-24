@@ -19,8 +19,10 @@ var, map, reduce should not be keywords
 
 consider diagnostics that contain start end end, not only a single point
 
+UI: stopping interpreter or AST builder now does not work
 
 minor issues that however should be fixed:
 ------------------------------------------
 
 - non integer power
+- strings and char sequences
