@@ -4,6 +4,7 @@ import com.sun.java.accessibility.util.SwingEventMonitor;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -30,10 +31,10 @@ import javax.swing.text.StyleConstants;
  */
 /*package*/ class EditorWindow extends JPanel {
 
-    private final JTextPane textArea;
+    private final EditorPane editorPane;
     private final JScrollPane scroller;
-    private final javax.swing.Timer docUpdateTimer;
-    private final ErrorHighlightPainter errorHighlightPainter;
+    private final javax.swing.Timer docUpdateTimer;    
+    private final ErrorHighlighter errorHighlighter;
     
     /**
      * Incremented each time we schedule a syntax check.
@@ -46,21 +47,21 @@ import javax.swing.text.StyleConstants;
     private int updateId = 0;
 
     public EditorWindow() {
-        textArea = new JTextPane();
-        textArea.setFont(new Font("monospaced", Font.PLAIN, 14));
-        scroller = new JScrollPane(textArea);
+        editorPane = new EditorPane();
+        editorPane.setFont(new Font("monospaced", Font.PLAIN, 14));
+        errorHighlighter = new ErrorHighlighter(editorPane.getHighlighter());
+        scroller = new JScrollPane(editorPane);
         setLayout(new BorderLayout());
         add(scroller, BorderLayout.CENTER);
-        errorHighlightPainter = new ErrorHighlightPainter();
         docUpdateTimer = new javax.swing.Timer(2000, new ActionListener() {            
             @Override
             public void actionPerformed(ActionEvent e) {
                 assert SwingUtilities.isEventDispatchThread();
-                Controller.getInstance().scheduleSyntaxCheck(textArea.getText(), ++updateId);
+                Controller.getInstance().scheduleSyntaxCheck(editorPane.getText(), ++updateId);
             }
         });
         docUpdateTimer.setRepeats(false);
-        textArea.getDocument().addDocumentListener(new DocumentListener() {            
+        editorPane.getDocument().addDocumentListener(new DocumentListener() {            
             @Override
             public void insertUpdate(DocumentEvent e) {
                 documentUpdated();
@@ -88,7 +89,7 @@ import javax.swing.text.StyleConstants;
 
     public String getText() {
         assert SwingUtilities.isEventDispatchThread();
-        return textArea.getText();
+        return editorPane.getText();
     }
     
     public void underlineErrors(List<Diagnostic> errors, final int updateId) {
@@ -98,18 +99,17 @@ import javax.swing.text.StyleConstants;
             SwingUtilities.invokeLater(() -> underlineErrorsImpl(errors, updateId));
         }
     }
-
-    public void underlineErrorsImpl(List<Diagnostic> errors, final int updateId) {
+    
+    public void underlineErrorsImpl(List<Diagnostic> diagnostics, final int updateId) {
         assert SwingUtilities.isEventDispatchThread();
         if (updateId != this.updateId) {
             return;
-        }
-        Highlighter highlighter = textArea.getHighlighter();
-        highlighter.removeAllHighlights();
-        if (errors.isEmpty()) {
+        }        
+        if (diagnostics.isEmpty()) {
+            errorHighlighter.setErrors(Collections.emptyList());
             return;
         }
-        ArrayList<Diagnostic> sorted = new ArrayList<>(errors);
+        ArrayList<Diagnostic> sorted = new ArrayList<>(diagnostics);
         Collections.sort(sorted, new Comparator<Diagnostic>() {
             @Override
             public int compare(Diagnostic d1, Diagnostic d2) {
@@ -120,13 +120,14 @@ import javax.swing.text.StyleConstants;
                 }
             }
         });
-        Document doc = textArea.getDocument();
+        ArrayList<Error> errors = new ArrayList<>(diagnostics.size());
+        Document doc = editorPane.getDocument();
         try {
             String text = doc.getText(0, doc.getLength());
             int lastOffset = 0;
             int lastLine = 1; // lines in diagnostics are 1-based
-            for (Diagnostic error : sorted) {
-                final int line = error.getLine();
+            for (Diagnostic diag : sorted) {
+                final int line = diag.getLine();
                 while (line > lastLine) {
                     char c = text.charAt(++lastOffset);
                     if (c == '\n') {
@@ -134,23 +135,77 @@ import javax.swing.text.StyleConstants;
                     }
                 }
                 // here the lastOffset is the offset of the line in text
-                int offset = lastOffset + error.getColumn();
-                int start = javax.swing.text.Utilities.getWordStart(textArea, offset);
-                int end = javax.swing.text.Utilities.getWordEnd(textArea, offset);
-                highlighter.addHighlight(start, end, errorHighlightPainter);
+                int offset = lastOffset + diag.getColumn();
+                int start = javax.swing.text.Utilities.getWordStart(editorPane, offset);
+                int end = javax.swing.text.Utilities.getWordEnd(editorPane, offset);
+                errors.add(new Error(diag.getLevel(), start, end, diag.getDisplayText()));
             }
         } catch (BadLocationException ex) {
             Logger.getLogger(EditorWindow.class.getName()).log(Level.SEVERE, null, ex);
         }
+        errorHighlighter.setErrors(errors);
+    }
+
+    private class Error {
+        public final Diagnostic.Level level;
+        public final int startOffset;
+        public final int endOffset;
+        public final String message;
+        public Error(Diagnostic.Level level, int startOffset, int endOffset, String message) {
+            this.level = level;
+            this.startOffset = startOffset;
+            this.endOffset = endOffset;
+            this.message = message;
+        }
     }
     
+    /** 
+     * Wraps standard error highligter;
+     * stores list of errors
+     */
+    private class ErrorHighlighter {
+        
+        private final Highlighter delegate;
+        private final ErrorHighlightPainter errorHighlightPainter;
+
+        /** 
+         * A SORTED list of errors;
+         * to be accessed in EDT only.
+         */
+        private List<Error> errors;
+        
+        public ErrorHighlighter(Highlighter delegate) {
+            this.delegate = delegate;
+            this.errorHighlightPainter = new ErrorHighlightPainter();
+             errors = Collections.emptyList();
+        }
+
+        public List<Error> getErrors() {
+            assert SwingUtilities.isEventDispatchThread();
+            return errors;
+        }
+
+        public void setErrors(List<Error> errors) {
+            assert SwingUtilities.isEventDispatchThread();
+            this.errors = errors;
+            delegate.removeAllHighlights();
+            try {
+                for (Error error : errors) {
+                    delegate.addHighlight(error.startOffset, error.endOffset, errorHighlightPainter);
+                }
+            } catch (BadLocationException ex) { // should never happen
+                Logger.getLogger(EditorWindow.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }
+
     private class ErrorHighlightPainter implements HighlightPainter {
         private final Color errorColor = new Color(200, 25, 25);
         public void paint(Graphics g, int p0, int p1, Shape bounds, JTextComponent c) {
             g.setColor(errorColor);
             try {
-                Rectangle start = textArea.modelToView(p0);
-                Rectangle end = textArea.modelToView(p1);
+                Rectangle start = editorPane.modelToView(p0);
+                Rectangle end = editorPane.modelToView(p1);
                 if (start.x < 0) {
                     return;
                 }
@@ -159,7 +214,6 @@ import javax.swing.text.StyleConstants;
                     int[] wf = {0, 0, -1, -1};
                     int[] xArray = new int[waveLength + 1];
                     int[] yArray = new int[waveLength + 1];
-
                     int yBase = (int) (start.y + start.height - 2);
                     for (int i = 0; i <= waveLength; i++) {
                         xArray[i] = start.x + i;
@@ -172,5 +226,34 @@ import javax.swing.text.StyleConstants;
             }
         }
     }
-}
+    
+    private class EditorPane extends JTextPane {
 
+        public EditorPane() {
+            ToolTipManager.sharedInstance().registerComponent(this);
+        }
+        
+        @Override
+        public String getToolTipText(MouseEvent ev) {
+            List<Error> errors = errorHighlighter.getErrors();
+            String tooltipText = null;
+            if(!errors.isEmpty()) {
+                Point pt = new Point(ev.getX(), ev.getY());
+                int pos = viewToModel(pt);                
+                for (Error err : errors) {
+                    if (err.startOffset <= pos) {
+                        if (err.endOffset >= pos) {
+                            tooltipText = err.message;
+                            break;
+                        }
+                    } else {
+                        // errors are always sorted
+                        break;
+                    }
+                }
+            }   
+            setToolTipText(tooltipText);
+            return super.getToolTipText(ev);
+        }
+    }
+}

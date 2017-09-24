@@ -25,8 +25,11 @@ import org.jb.parser.api.Parser;
  */
 /*package*/ class Controller {
     
+    
     private static final Controller INSTANCE = new Controller();
 
+    public static final boolean TRACE = Boolean.getBoolean("jbs.trace");
+    
     private volatile EditorWindow editorWindow;
     private volatile OutputWindow outputWindow;
     
@@ -128,6 +131,12 @@ import org.jb.parser.api.Parser;
             outputWindow.printErr(ex.getLocalizedMessage());
         } catch (TokenStreamException ex) {
             outputWindow.printErr(ex.getLocalizedMessage());
+        }
+        if (TRACE) {
+            System.out.println("--- error check done ---");
+            for (Diagnostic d : diagnostics) {
+                System.out.println(d.toString());
+            }
         }
         editorWindow.underlineErrors(diagnostics, updateId);
     }

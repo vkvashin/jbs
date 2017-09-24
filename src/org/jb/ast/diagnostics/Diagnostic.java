@@ -6,7 +6,7 @@ package org.jb.ast.diagnostics;
  */
 public final class Diagnostic {
     
-    private enum Level {
+    public enum Level {
         /** Just a warning. */
         WARNING("Warning"),
         
@@ -49,6 +49,10 @@ public final class Diagnostic {
         this.line = line;
         this.column = column;
         this.message = message;
+    }
+
+    public Level getLevel() {
+        return level;
     }
 
     public int getLine() {
