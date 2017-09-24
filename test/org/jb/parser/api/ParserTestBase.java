@@ -10,17 +10,21 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 import org.jb.ast.api.ASTNode;
+import org.jb.ast.api.Expr;
 import org.jb.lexer.api.LexerTestBase;
 import org.jb.lexer.api.TokenStream;
 import static org.junit.Assert.assertTrue;
+import org.junit.Before;
 
 /**
  *
  * @author vkvashin
  */
 public class ParserTestBase extends LexerTestBase {
+    
+    private boolean printTypes = false;
 
-    public static class AstPrinter {
+    public class AstPrinter {
 
         private final int step = 4;
         private final StringBuilder indentBuffer = new StringBuilder();
@@ -51,7 +55,11 @@ public class ParserTestBase extends LexerTestBase {
 
         public void printAst(ASTNode ast) {
             while (ast != null) {
-                ps.append(indentBuffer).append(toString(ast)).append('\n');
+                ps.append(indentBuffer).append(toString(ast)); 
+                if (printTypes && ast instanceof Expr) {
+                    ps.append(' ').append(((Expr) ast).getType().getDisplayName());
+                }
+                ps.append('\n');
                 ASTNode firstChild = ast.getFirstChild();
                 if (firstChild != null) {
                     indent();
@@ -67,6 +75,15 @@ public class ParserTestBase extends LexerTestBase {
         }
     }
 
+    @Before
+    public void setUp() {
+        printTypes = false;
+    }
+
+    public void setPrintTypes(boolean printTypes) {
+        this.printTypes = printTypes;
+    }
+    
     protected void printAst(ASTNode ast) {
         printAst(ast, System.out);
     }

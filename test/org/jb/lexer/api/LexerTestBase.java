@@ -169,7 +169,7 @@ public class LexerTestBase {
                 }
             }
         } else {
-            assertTrue("There should be at least " + index+1 + " diagnostics", false);
+            assertTrue("Diagnoistic #" + index+1 + " should be " + expectedMessage, false);
         }
     }
     

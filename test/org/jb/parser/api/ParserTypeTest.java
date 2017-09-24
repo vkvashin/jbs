@@ -59,6 +59,28 @@ public class ParserTypeTest extends ParserTestBase {
     }
 
     @Test
+    public void testDuplicateVar() throws Exception {
+        String source =
+                "var x = 500\n" +
+                "var x = 3.14";
+        //setDebug(true);
+        getAst(source);        
+        assertDiagnosticEquals(0, 2, 5, "duplicate*");
+    }
+
+    @Test
+    public void testNotIntegerSeq() throws Exception {
+        String source = 
+            "var x = { 1.2, 2}\n" + 
+            "var y = { 3, 4.2}";        
+        setDebug(true);
+        setPrintTypes(true);
+        getAst(source);    
+        assertDiagnosticEquals(0, 1, 11, "seqence bound is not an integer*");
+        assertDiagnosticEquals(1, 2, 14, "seqence bound is not an integer*");
+    }
+
+    @Test
     public void testIntAndSeq() throws Exception {
         String source =
                 "var x = 500\n" +
