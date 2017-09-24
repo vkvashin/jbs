@@ -92,6 +92,12 @@ public final class BinaryOpExpr extends Expr {
         if(rightType == Type.ERRONEOUS) {
             return Type.ERRONEOUS;
         }
+        if (opKind == OpKind.POW) {
+            if (rightType != Type.INT) {
+                reportError(diagnosticListener, "wrong 2-nd operand in operation ^: should be an integer");
+                return Type.ERRONEOUS;
+            }
+        }
         switch (leftType) {
             case INT:
                 switch (rightType) {                    

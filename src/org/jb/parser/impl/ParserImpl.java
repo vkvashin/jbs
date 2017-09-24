@@ -274,8 +274,16 @@ public class ParserImpl {
         Expr first = expression();
         consumeExpected(Token.Kind.COMMA);
         Expr last = expression();
+        checkSeqBoundExprType(first);
+        checkSeqBoundExprType(last);
         consumeExpected(Token.Kind.RCURLY);
         return new SeqExpr(firstTok.getLine(), firstTok.getColumn(), first, last);
+    }
+    
+    private void checkSeqBoundExprType(Expr expr) {
+        if (expr.getType() != Type.INT && expr.getType() != Type.ERRONEOUS) {
+            error(expr, "seqence bound is not an integer expression");
+        }
     }
 
     /** returns type of an element in sequence */
