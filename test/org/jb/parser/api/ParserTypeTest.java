@@ -120,4 +120,16 @@ public class ParserTypeTest extends ParserTestBase {
         Type type = init.getType();
         assertTypeEquals(type.SEQ_FLOAT, type);
     }    
+    
+    @Test
+    public void testPower() throws Exception {
+        String source =
+                "var x = 2 ^ 3\n" +
+                "var y = 2.7 ^ 4\n" +
+                "var z = 2 ^ -4" + // this is checked only by runtime
+                "var q = 2 ^ 1.4";
+        setDebug(true);
+        getAst(source);        
+        assertDiagnosticEquals(0, 3, 23, "wrong 2-nd operand in operation ^*");
+    }
 }
