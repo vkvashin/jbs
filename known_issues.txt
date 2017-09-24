@@ -1,9 +1,6 @@
 Room for improvement:
 =====================
 
-Lexer
------
-
 JbToken is too heavy - subclassing can be used for for 
 1) fixed text tokens
 2) line & col can be but into a single int
@@ -14,17 +11,16 @@ Line endings
 
 StringBufferInputStream in test
 
-Error processing in Lexer:
-1) JbTokenStreamException should contain line and col
-2) distinguish fatal errors (IO, etc) and syntax
-
-Lexer: consider EOF token
-
-Parser
-------
-
-All
----
-
 I18N
 
+Modules
+
+var, map, reduce should not be keywords
+
+consider diagnostics that contain start end end, not only a single point
+
+
+minor issues that however should be fixed:
+------------------------------------------
+
+- non integer power
