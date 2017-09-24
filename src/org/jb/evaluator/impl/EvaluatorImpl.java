@@ -216,7 +216,7 @@ public class EvaluatorImpl {
                 case SEQ_INT:
                     return evaluateMap(seqValue.getIntArray(), var, transformation);
                 case SEQ_FLOAT:
-                    throw new UnsupportedOperationException("float map is not supported yet");
+                    return evaluateMap(seqValue.getFloatArray(), var, transformation);
                 case ERRONEOUS:
                     return Value.ERROR;
                 case INT:
@@ -230,53 +230,52 @@ public class EvaluatorImpl {
         return Value.ERROR;
     }
 
-    private class IntMapVariable extends Variable {
-        private final int[] data;
-        private int index;
-        public IntMapVariable(String name, DeclStatement declaration, int[] data) {
-            super(name, declaration);
-            this.data = data;
-            index = 0;
+    private Value evaluateMap(Object array, DeclStatement varDecl, Expr transformation) {        
+        assert (array instanceof int[] || array instanceof float[]);
+        // input array and its size:
+        int[] intIn;
+        float[] floatIn;
+        final int size;
+        if (array instanceof int[]) {
+            intIn = (int[]) array;
+            size = intIn.length;
+            floatIn = null;
+        } else {
+            floatIn = (float[]) array;
+            size = floatIn.length;
+            intIn = null;
         }
-        @Override
-        public Value getValue() {
-            return new Value(data[index]);
-        }
-        public void next() {
-            index++;
-        }
-        public int index() {
-            return index;
-        }
-        public boolean hasNext() {
-            return index < data.length;
-        }
-    }
-
-    private Value evaluateMap(int[] array, DeclStatement varDecl, Expr transformation) {
+        // output array:
+        int[] intOut = new int[size];
+        float[] floatOut = null;
+        // smart variable:
         String name = varDecl.getName().toString();
-        IntMapVariable mapVar = new IntMapVariable(name, varDecl, array);        
+        int[] idx = new int[1]; // to be able to use mutable index in anonimous class
+        Variable smartVar = new Variable(name, varDecl) {
+            @Override
+            public Value getValue() {
+                return (intIn != null) ? new Value(intIn[idx[0]]) : new Value(floatIn[idx[0]]);
+            }
+        };
         pushSymtab(false);
-        symtab.put(name, mapVar);
+        symtab.put(name, smartVar);
         try {
-            int[] intOut = new int[array.length];
-            float[] floatOut = null;
-            while (mapVar.hasNext()) {
+            for (idx[0] = 0; idx[0] < size; idx[0]++) {
                 Value v = evaluate(transformation);
                 Type type = v.getType();
                 switch (type) {                    
                     case INT:
-                        intOut[mapVar.index()] = v.getInt();
+                        intOut[idx[0]] = v.getInt();
                         break;
                     case FLOAT:
                         if (floatOut == null) {
                             floatOut = new float[intOut.length];
-                            for (int i = 0; i < mapVar.index(); i++) {
+                            for (int i = 0; i < idx[0]; i++) {
                                 floatOut[i] = (float) intOut[i];
                             }
-                            intOut = null;
+                            intOut = null; 
                         }
-                        floatOut[mapVar.index()] = v.getFloat();
+                        floatOut[idx[0]] = v.getFloat();
                         break;
                     case ERRONEOUS:
                         return Value.ERROR;
@@ -287,7 +286,6 @@ public class EvaluatorImpl {
                         error(transformation, "unexpected type: " + type);
                         return Value.ERROR;
                 }
-                mapVar.next();
             }
             return (floatOut == null) ? new Value(intOut) : new Value(floatOut);
         } finally {
@@ -296,7 +294,40 @@ public class EvaluatorImpl {
     }
 
     private Value evaluateReduce(ReduceExpr expr) {
-        throw new UnsupportedOperationException("reduce is not supported yet");        
+        final Expr seqExpr = expr.getSequence();
+        final Expr defValueExpr = expr.getDefValue();        
+        final DeclStatement prev = expr.getPrev();
+        final DeclStatement curr = expr.getCurr();        
+        final Expr transformation = expr.getTransformation();
+        // if either of the below is null, this should have already been reported
+        if (seqExpr != null && defValueExpr != null && prev != null && curr != null && transformation != null) {
+            Value defValue = evaluate(defValueExpr);
+            if (!isArithmetic(defValue)) {
+                error(defValueExpr, "expression should be either int or float");
+                return Value.ERROR;
+            }
+            Value seqValue = evaluate(seqExpr);
+            Type type = seqValue.getType();
+            switch (type) {
+                case SEQ_INT:
+                    return evaluateReduce(seqValue.getIntArray(), defValue, prev, curr, transformation);
+                case SEQ_FLOAT:
+                    return evaluateReduce(seqValue.getFloatArray(), defValue, prev, curr, transformation);
+                case ERRONEOUS:
+                    return Value.ERROR;
+                case INT:
+                case FLOAT:
+                case STRING:
+                default:
+                    error(expr, "unexpected type, expected sequence, but got " + type);
+                    return Value.ERROR;
+            }
+        }
+        return Value.ERROR;        
+    }
+
+    private Value evaluateReduce(Object array, Value defValue, DeclStatement prev, DeclStatement curr, Expr transformation) {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     private Value evaluateSequence(SeqExpr expr) {
@@ -326,9 +357,9 @@ public class EvaluatorImpl {
             Expr rightExpr = expr.getRight();
             if (rightExpr != null) {
                 Value leftValue = evaluate(leftExpr);
-                if (isArythmetic(leftValue)) {
+                if (isArithmetic(leftValue)) {
                     Value rightValue = evaluate(rightExpr);
-                    if (isArythmetic(rightValue)) {
+                    if (isArithmetic(rightValue)) {
                         return evaluateOperation(expr, leftValue, rightValue);
                     }
                 }
@@ -337,14 +368,14 @@ public class EvaluatorImpl {
         return Value.ERROR;
     }
     
-    private boolean isArythmetic(Value value) {
+    private boolean isArithmetic(Value value) {
         return value.getType() == Type.INT || value.getType() == Type.FLOAT;
     }
         
     private Value evaluateOperation(BinaryOpExpr expr, Value leftValue, Value rightValue) {
         final BinaryOpExpr.OpKind op = expr.getOpKind();
-        assert isArythmetic(leftValue); // guaranteed by caller
-        assert isArythmetic(rightValue); // guaranteed by caller
+        assert isArithmetic(leftValue); // guaranteed by caller
+        assert isArithmetic(rightValue); // guaranteed by caller
         final Type leftType = leftValue.getType();
         final Type rightType = rightValue.getType();
         switch (op) {            

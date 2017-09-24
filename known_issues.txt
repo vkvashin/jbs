@@ -19,7 +19,9 @@ var, map, reduce should not be keywords
 
 consider diagnostics that contain start end end, not only a single point
 
+Error message concerning duplicate variable should have child that points to the previous declaration
 UI: stopping interpreter or AST builder now does not work
+UI: hyperlinks from output window
 
 minor issues that however should be fixed:
 ------------------------------------------

@@ -1,8 +1,4 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
+
 package org.jb.ast.api;
 
 /**
@@ -25,6 +21,22 @@ public final class  ReduceExpr extends Expr {
         this.curr = curr;
         this.transformation = transformation;
         chainNodes(this.sequence, this.defValue, this.prev, this.curr, this.transformation);
+    }
+
+    public Expr getSequence() {
+        return sequence;
+    }
+
+    public Expr getDefValue() {
+        return defValue;
+    }
+
+    public DeclStatement getPrev() {
+        return prev;
+    }
+
+    public DeclStatement getCurr() {
+        return curr;
     }
 
     @Override
