@@ -138,7 +138,7 @@ import javax.swing.text.StyleConstants;
                 int offset = lastOffset + diag.getColumn();
                 int start = javax.swing.text.Utilities.getWordStart(editorPane, offset);
                 int end = javax.swing.text.Utilities.getWordEnd(editorPane, offset);
-                errors.add(new Error(diag.getLevel(), start, end, diag.getDisplayText()));
+                errors.add(new Error(diag.getLevel(), start, end, diag.getMessage().toString()));
             }
         } catch (BadLocationException ex) {
             Logger.getLogger(EditorWindow.class.getName()).log(Level.SEVERE, null, ex);

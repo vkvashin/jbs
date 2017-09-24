@@ -20,12 +20,12 @@ import org.jb.ast.diagnostics.DiagnosticListener;
 public class ParserImpl {
 
     private final TokenBuffer tokens;
-    private final DiagnosticListener errorListener;
+    private final DiagnosticListener diagnosticListener;
     private Symtab symtab;
 
     public ParserImpl(TokenStream ts, DiagnosticListener errorListener) throws TokenStreamException {
         tokens = new ZeroLookaheadTokenBuffer(ts); //WindowTokenBuffer(ts, 1, 4096);
-        this.errorListener = errorListener;
+        this.diagnosticListener = errorListener;
         symtab = new Symtab(null, false);
     }
 
@@ -59,7 +59,7 @@ public class ParserImpl {
             try {
                 return statementImpl();
             } catch (SynaxError ex) {
-                errorListener.report(toDiagnostic(ex));
+                diagnosticListener.report(toDiagnostic(ex));
                 skipToTheNextLine();
             }
         }
@@ -96,6 +96,9 @@ public class ParserImpl {
         Expr expr = expression();
         Type type = expr.getType();
         String name = nameTok.getText().toString();
+        if (symtab.contains(name)) {
+            error(nameTok, "duplicate variable declaration " + name);
+        }
         symtab.put(name, type);
         return new DeclStatement(firstTok.getLine(), firstTok.getColumn(), name, expr);
     }
@@ -163,7 +166,7 @@ public class ParserImpl {
         Expr left = expressionFromPN(q, null);
         int line = (firstTok == null) ? left.getLine() : firstTok.getLine();
         int column = (firstTok == null) ? left.getColumn(): firstTok.getColumn();
-        return new BinaryOpExpr(line, column, op, left, right);
+        return new BinaryOpExpr(line, column, op, left, right, diagnosticListener);
     }
     
     private Expr operand() throws SynaxError {
@@ -253,7 +256,7 @@ public class ParserImpl {
         String name = tok.getText().toString();
         Type type = symtab.getType(name);
         if (type == null) {
-            DefaultDiagnosticListener.getDefaultListener().report(Diagnostic.error(tok.getLine(), tok.getColumn(), "undeclared variable " + name));
+            error(tok, "undeclared variable " + name);
             type = Type.ERRONEOUS;
         }
         return new IdExpr(name, tok.getLine(), tok.getColumn(), type);
@@ -376,7 +379,7 @@ public class ParserImpl {
         try {
             return tokens.LA(lookAhead);
         } catch (TokenStreamException ex) {
-            errorListener.report(Diagnostic.fatal(-1, -1, ex.getMessage()));
+            diagnosticListener.report(Diagnostic.fatal(-1, -1, ex.getMessage()));
         }
         return null; // TODO: return EOF or throw an exception
     }
@@ -402,11 +405,15 @@ public class ParserImpl {
     }
     
     private void error(ASTNode node, String message) {
-        errorListener.report(Diagnostic.error(node.getLine(), node.getColumn(), message));
+        diagnosticListener.report(Diagnostic.error(node.getLine(), node.getColumn(), message));
+    }
+
+    private void error(Token tok, String message) {
+        diagnosticListener.report(Diagnostic.error(tok.getLine(), tok.getColumn(), message));
     }
 
     private void error(int line, int column, String message) {
-        errorListener.report(Diagnostic.error(line, column, message));
+        diagnosticListener.report(Diagnostic.error(line, column, message));
     }
 
     private static class SynaxError extends Exception {
@@ -415,7 +422,7 @@ public class ParserImpl {
         private final int column;
         
         SynaxError(Token tok, String message) {
-            super(composeMessage(tok, message));
+            super(message);
             if (tok == null/*paranoia*/) {
                 line = column = Integer.MAX_VALUE;
             } else {
@@ -430,14 +437,6 @@ public class ParserImpl {
 
         public int getColumn() {
             return column;
-        }
-        
-        private static String composeMessage(Token tok, String message) {
-            if (tok == null) {
-                return "Syntax error: " + message;
-            } else {
-                return "Syntax error in " + tok.getLine() + ':' + tok.getColumn() + ": " + message;
-            }
         }
     }
     
@@ -461,12 +460,12 @@ public class ParserImpl {
             this.previous = previous;
         }        
 
-        public boolean exists(String name) {
+        public boolean contains(String name) {
             if (data.containsKey(name)) {
                 return true;
             }
             if (transitive && previous != null) {
-                return previous.exists(name);
+                return previous.contains(name);
             }
             return false;
         }

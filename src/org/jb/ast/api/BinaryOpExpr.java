@@ -7,6 +7,7 @@ package org.jb.ast.api;
 
 import org.jb.ast.diagnostics.DefaultDiagnosticListener;
 import org.jb.ast.diagnostics.Diagnostic;
+import org.jb.ast.diagnostics.DiagnosticListener;
 
 /**
  *
@@ -47,14 +48,14 @@ public final class BinaryOpExpr extends Expr {
     // or vice versa. Now we cache it.
     private final Type type;
 
-    public BinaryOpExpr(int line, int column, OpKind kind, Expr left, Expr right) {
+    public BinaryOpExpr(int line, int column, OpKind kind, Expr left, Expr right, DiagnosticListener diagnosticListener) {
         super(line, column);
         this.opKind = kind;
         this.left = left;
         this.right = right;
         this.left.setNextSibling(this.right);
         this.right.setNextSibling(null);
-        type = calculateType(true);
+        type = calculateType(true, diagnosticListener);
     }
 
     @Override
@@ -85,7 +86,7 @@ public final class BinaryOpExpr extends Expr {
         return type;
     }
     
-    private Type calculateType(boolean reportError) {
+    private Type calculateType(boolean reportError, DiagnosticListener diagnosticListener) {
         final Type leftType = left.getType();
         final Type rightType = right.getType();
         if(rightType == Type.ERRONEOUS) {
@@ -100,7 +101,7 @@ public final class BinaryOpExpr extends Expr {
                         return Type.FLOAT;
                     default:
                         if (reportError) {
-                            reportIncompatibleOpTypes(leftType, rightType);
+                            reportIncompatibleOpTypes(diagnosticListener, leftType, rightType);
                         }
                         return Type.ERRONEOUS;
                 }
@@ -111,7 +112,7 @@ public final class BinaryOpExpr extends Expr {
                         return Type.FLOAT;
                     default:
                         if (reportError) {
-                            reportIncompatibleOpTypes(leftType, rightType);
+                            reportIncompatibleOpTypes(diagnosticListener, leftType, rightType);
                         }
                         return Type.ERRONEOUS;
                 }
@@ -119,7 +120,8 @@ public final class BinaryOpExpr extends Expr {
             case SEQ_FLOAT:
             case STRING:
                 if (reportError) {
-                    reportError("operation " + opKind.getShortDisplayName() + " can not be applied to " + leftType.getDisplayName());
+                    reportError(diagnosticListener,
+                            "operation " + opKind.getShortDisplayName() + " can not be applied to " + leftType.getDisplayName());
                 }                
                 return Type.ERRONEOUS;
             case ERRONEOUS:
@@ -129,15 +131,15 @@ public final class BinaryOpExpr extends Expr {
         }
     }
 
-    private void reportIncompatibleOpTypes(final Type leftType, final Type rightType) {
-        DefaultDiagnosticListener.getDefaultListener().report(
+    private void reportIncompatibleOpTypes(DiagnosticListener diagnosticListener, Type leftType, Type rightType) {
+        diagnosticListener.report(
                 Diagnostic.error(getLine(), getColumn(),
                         "incompatible operand types in operation " + opKind.getShortDisplayName() + ": " +
                                 leftType.getDisplayName() + " and " + rightType.getDisplayName()));
     }
 
-    protected void reportError(String message) {
-        DefaultDiagnosticListener.getDefaultListener().report(
+    protected void reportError(DiagnosticListener diagnosticListener, String message) {
+        diagnosticListener.report(
                 Diagnostic.error(getLine(), getColumn(), message));
     }
 

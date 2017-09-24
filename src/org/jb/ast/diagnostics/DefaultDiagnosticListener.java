@@ -25,6 +25,13 @@ public class DefaultDiagnosticListener implements DiagnosticListener {
     
     private static volatile DiagnosticListener INSTANCE = new DefaultDiagnosticListener();
 
+    /** 
+     * NB: use this only when creating lexers and parsers;
+     * do NOT use it to report issues from elsewhere:
+     * those issues won't get to correct listeners otherwise.
+     * 
+     * TODO: consider a thread-local instead?
+     */
     public static DiagnosticListener getDefaultListener() {
         return INSTANCE;
     }

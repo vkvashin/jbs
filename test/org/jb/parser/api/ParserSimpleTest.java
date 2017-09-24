@@ -136,7 +136,7 @@ public class ParserSimpleTest extends ParserTestBase {
         setDebug(true);
         doTestAST(source, expected);
         assertDiagnosticEquals(0, 1, 9, "more than one digital point");
-        assertDiagnosticEquals(1, 4, 1, "Syntax error in 4:1: unexpected token 123");
+        assertDiagnosticEquals(1, 4, 1, "unexpected token 123");
         assertDiagnosticEquals(2, 8, 1, "unterminated string");        
     }
 
