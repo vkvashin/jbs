@@ -11,8 +11,11 @@ package org.jb.ast.api;
  */
 public final class FloatLiteral extends Literal {
 
-    public FloatLiteral(int line, int column, CharSequence text) {
+    private final double value;
+
+    public FloatLiteral(int line, int column, CharSequence text, double value) {
         super(line, column, text);
+        this.value = value;
     }
 
     @Override
@@ -23,5 +26,9 @@ public final class FloatLiteral extends Literal {
     @Override
     public Type getType() {
         return Type.FLOAT;
+    }
+
+    public double getValue() {
+        return value;
     }
 }

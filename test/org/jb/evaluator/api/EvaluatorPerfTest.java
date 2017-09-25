@@ -11,7 +11,7 @@ public class EvaluatorPerfTest extends EvaluatorTestBase {
 
     @Test
     public void testCompareReducePerf() throws Exception {
-        int cnt = 50000;
+        int cnt = 5000000;
         String source = 
             "var n = " + cnt + "\n" + 
             "var sequence = map({0, n}, i -> (-1)^i / (2.0 * i + 1))\n" + 
@@ -39,5 +39,5 @@ public class EvaluatorPerfTest extends EvaluatorTestBase {
         System.out.println("Script time " + time1 + "ms");
         System.out.println("Java: pi=" + pi);
         System.out.println("Java time " + time2 + "ms");
-    }
+    }    
 }

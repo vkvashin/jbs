@@ -335,8 +335,17 @@ public class ParserSimpleTest extends ParserTestBase {
             "var x = {1, 3}\n" + 
             "var y = reduce(x, 0, x x -> x+1)\n" + 
             "out y\n";
-        setDebug(true);
+        //setDebug(true);
         doTestAST(source, null);
         assertDiagnosticEquals(0, 2, 24, "duplicate variable declaration x");
+    }    
+    
+    @Test
+    public void testParseTooLongInt() throws Exception {
+        String source = 
+            "var x = 11111111111111111111\n";
+        setDebug(true);
+        doTestAST(source, null);
+        assertDiagnosticEquals(0, 1, 9, "integer out of limits");
     }    
 }

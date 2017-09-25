@@ -28,3 +28,5 @@ minor issues that however should be fixed:
 
 - non integer power
 - strings and char sequences
+- unary minus operation
+- sequence of sequences

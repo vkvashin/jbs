@@ -236,14 +236,28 @@ public class ParserImpl {
         final Token tok = LA(0);
         consume();
         assert tok.getKind() == Token.Kind.INT;
-        return new IntLiteral(tok.getLine(), tok.getColumn(), tok.getText());
+        try {
+            int value = Integer.parseInt(tok.getText().toString());
+            return new IntLiteral(tok.getLine(), tok.getColumn(), tok.getText(), value);
+        } catch (NumberFormatException e) {
+            // e.getMessage() returns meaningless "for XXXXXX" where XXXXXX is the text being parsed
+            // lexer already checked syntax, but not the max/min =>
+            throw new SynaxError(tok, "integer out of limits");
+        }
     }
 
     private FloatLiteral floatLiteral() throws SynaxError {
         final Token tok = LA(0);
         consume();
         assert tok.getKind() == Token.Kind.FLOAT;
-        return new FloatLiteral(tok.getLine(), tok.getColumn(), tok.getText());
+        try {
+            double value = Double.parseDouble(tok.getText().toString());
+            return new FloatLiteral(tok.getLine(), tok.getColumn(), tok.getText(), value);
+        } catch (NumberFormatException e) {
+            // e.getMessage() returns meaningless "for XXXXXX" where XXXXXX is the text being parsed
+            // lexer already checked syntax, but not the max/min =>
+            throw new SynaxError(tok, "float number or its precision out of limits");
+        }
     }
 
     private StringLiteral stringLiteral() throws SynaxError {

@@ -161,19 +161,9 @@ public class EvaluatorImpl {
             case PAREN:
                 return evaluate(((ParenExpr) expr).getFirstChild());
             case INT:
-                try {
-                    return new Value(Integer.parseInt(((Literal) expr).getText().toString()));
-                } catch (NumberFormatException ex) {
-                    error(expr, ex.getLocalizedMessage());
-                    return Value.ERROR;
-                }
+                return new Value(((IntLiteral) expr).getValue());
             case FLOAT:
-                try {
-                    return new Value(Double.parseDouble(((Literal) expr).getText().toString()));
-                } catch (NumberFormatException ex) {
-                    error(expr, ex.getLocalizedMessage());
-                    return Value.ERROR;
-                }
+                return new Value(((FloatLiteral) expr).getValue());
             case ID:
                 IdExpr id = (IdExpr) expr;
                 Variable var = symtab.get(id.getName());
@@ -470,27 +460,14 @@ public class EvaluatorImpl {
     }
 
     private double evaluatePower(double left, int right) {
-        assert right >= 0;
-        if (right < 0) {
-            return 0;
-        }
-        double result = left;
-        while (right-- > 1) {
-            result *= left;
-        }
-        return result;
+        return Math.pow(left, right);
     }
 
     private int evaluatePower(int left, int right) {
-        assert right >= 0;
-        if (right < 0) {
-            return 0;
+        if (left == -1) {
+            return (right%2 == 0) ? +1 : -1;
         }
-        int result = 1;
-        while (right-- > 0) {
-            result *= left;
-        }
-        return result;        
+        return (int) Math.pow(left, right);
     }
 
     /** except for ^ (power) ! */

@@ -11,8 +11,11 @@ package org.jb.ast.api;
  */
 public final class IntLiteral extends Literal {
 
-    public IntLiteral(int line, int column, CharSequence text) {
+    private final int value;
+
+    public IntLiteral(int line, int column, CharSequence text, int value) {
         super(line, column, text);
+        this.value = value;
     }
 
     @Override
@@ -24,4 +27,8 @@ public final class IntLiteral extends Literal {
     public Type getType() {
         return Type.INT;
     }
+
+    public int getValue() {
+        return value;
+    }    
 }
