@@ -28,7 +28,7 @@ public final class DeclStatement extends Statement {
         return initializer;
     }
 
-    public CharSequence getName() {
+    public CharSequence getDelarationName() {
         return name;
     }
 

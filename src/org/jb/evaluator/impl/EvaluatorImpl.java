@@ -77,12 +77,11 @@ public class EvaluatorImpl {
     }
 
     private void executeDecl(DeclStatement stmt) {
-        String name = stmt.getName().toString();
-        if (REPORT_PARSER_ERRORS && symtab.contains(name)) {
-            error(stmt, "duplicate variable declaration " + name);
+        if (REPORT_PARSER_ERRORS && symtab.contains(stmt)) {
+            error(stmt, "duplicate variable declaration " + stmt.getDelarationName());
         }
-        Variable var = new Variable(name, stmt);
-        symtab.put(name, var);
+        Variable var = new Variable(stmt);
+        symtab.put(var);
     }
 
     private void executePrint(PrintStatement stmt) {
@@ -251,16 +250,15 @@ public class EvaluatorImpl {
         int[] intOut = new int[size];
         float[] floatOut = null;   
         // smart variable:
-        String name = varDecl.getName().toString();
         int[] idx = new int[1]; // to be able to use mutable index in anonimous class
-        Variable smartVar = new Variable(name, varDecl) {
+        Variable smartVar = new Variable(varDecl) {
             @Override
             public Value getValue() {
                 return (intIn != null) ? new Value(intIn[idx[0]]) : new Value(floatIn[idx[0]]);
             }
         };
         pushSymtab(false);
-        symtab.put(name, smartVar);
+        symtab.put(smartVar);
         try {
             for (idx[0] = 0; idx[0] < size; idx[0]++) {
                 Value v = evaluate(transformation);
@@ -551,6 +549,10 @@ public class EvaluatorImpl {
             this.previous = previous;
         }
 
+        public boolean contains(DeclStatement stmt) {
+            return contains(stmt.getDelarationName().toString());
+        }
+
         public boolean contains(String name) {
             if (data.containsKey(name)) {
                 return true;
@@ -570,12 +572,7 @@ public class EvaluatorImpl {
         }
 
         public void put(Variable var) {
-            put(var.getName(), var);
-        }
-
-        @Deprecated
-        public void put(String name, Variable var) {
-            data.put(name, var);
+            data.put(var.getName(), var);
         }
     }
 
@@ -672,12 +669,7 @@ public class EvaluatorImpl {
         private boolean cached;
 
         protected Variable(DeclStatement declaration) {
-            this(declaration.getName().toString(), declaration);
-        }
-
-        @Deprecated
-        protected Variable(String name, DeclStatement declaration) {
-            this.name = name;
+            this.name = declaration.getDelarationName().toString();
             this.decl = declaration;
         }
 

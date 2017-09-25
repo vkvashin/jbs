@@ -322,7 +322,7 @@ public class ParserImpl {
             consumeExpected(Token.Kind.COMMA);
             DeclStatement var = lambdaVarDecl(varType);
             consumeExpected(Token.Kind.ARROW);
-            symtab.put(var.getName().toString(), Type.INT);
+            symtab.put(var.getDelarationName().toString(), Type.INT);
             Expr transformation = expression();
             consumeExpected(Token.Kind.RPAREN);
             return new MapExpr(firstTok.getLine(), firstTok.getColumn(), seq, var, transformation);
@@ -344,8 +344,8 @@ public class ParserImpl {
             DeclStatement prev = lambdaVarDecl(varType);
             DeclStatement curr = lambdaVarDecl(varType);
             consumeExpected(Token.Kind.ARROW);
-            symtab.put(prev.getName().toString(), Type.INT);
-            symtab.put(curr.getName().toString(), Type.INT);
+            symtab.put(prev.getDelarationName().toString(), Type.INT);
+            symtab.put(curr.getDelarationName().toString(), Type.INT);
             Expr transformation = expression();
             consumeExpected(Token.Kind.RPAREN);
             return new ReduceExpr(firstTok.getLine(), firstTok.getColumn(), seq, defValue, prev, curr, transformation);
