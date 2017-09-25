@@ -95,7 +95,7 @@ public class ParserImpl {
         consume();// =
         Expr expr = expression();
         Type type = expr.getType();
-        String name = nameTok.getText().toString();
+        CharSequence name = nameTok.getText();
         if (symtab.contains(name)) {
             error(nameTok, "duplicate variable declaration " + name);
         }
@@ -107,7 +107,7 @@ public class ParserImpl {
         final Token tok = LA(0);
         assert tok.getKind() == Token.Kind.ID;
         consume();
-        String name = tok.getText().toString();
+        CharSequence name = tok.getText();
         if (symtab.contains(name)) {
             error(tok, "duplicate variable declaration " + name);
         }
@@ -257,7 +257,7 @@ public class ParserImpl {
         final Token tok = LA(0);
         assert tok.getKind() == Token.Kind.ID;
         consume();
-        String name = tok.getText().toString();
+        CharSequence name = tok.getText();
         Type type = symtab.getType(name);
         if (type == null) {
             error(tok, "undeclared variable " + name);
@@ -322,7 +322,7 @@ public class ParserImpl {
             consumeExpected(Token.Kind.COMMA);
             DeclStatement var = lambdaVarDecl(varType);
             consumeExpected(Token.Kind.ARROW);
-            symtab.put(var.getDelarationName().toString(), Type.INT);
+            symtab.put(var.getDelarationName(), Type.INT);
             Expr transformation = expression();
             consumeExpected(Token.Kind.RPAREN);
             return new MapExpr(firstTok.getLine(), firstTok.getColumn(), seq, var, transformation);
@@ -344,8 +344,8 @@ public class ParserImpl {
             DeclStatement prev = lambdaVarDecl(varType);
             DeclStatement curr = lambdaVarDecl(varType);
             consumeExpected(Token.Kind.ARROW);
-            symtab.put(prev.getDelarationName().toString(), Type.INT);
-            symtab.put(curr.getDelarationName().toString(), Type.INT);
+            symtab.put(prev.getDelarationName(), Type.INT);
+            symtab.put(curr.getDelarationName(), Type.INT);
             Expr transformation = expression();
             consumeExpected(Token.Kind.RPAREN);
             return new ReduceExpr(firstTok.getLine(), firstTok.getColumn(), seq, defValue, prev, curr, transformation);
@@ -416,15 +416,15 @@ public class ParserImpl {
         return Diagnostic.error(err.getLine(), err.getColumn(), err.getLocalizedMessage());
     }
     
-    private void error(ASTNode node, String message) {
+    private void error(ASTNode node, CharSequence message) {
         diagnosticListener.report(Diagnostic.error(node.getLine(), node.getColumn(), message));
     }
 
-    private void error(Token tok, String message) {
+    private void error(Token tok, CharSequence message) {
         diagnosticListener.report(Diagnostic.error(tok.getLine(), tok.getColumn(), message));
     }
 
-    private void error(int line, int column, String message) {
+    private void error(int line, int column, CharSequence message) {
         diagnosticListener.report(Diagnostic.error(line, column, message));
     }
 
@@ -465,14 +465,14 @@ public class ParserImpl {
 
         private boolean transitive;
         private Symtab previous;
-        private Map<String, Type> data = new TreeMap<>();
+        private Map<CharSequence, Type> data = new TreeMap<>();
 
         public Symtab(Symtab previous, boolean transitive) {
             this.transitive = transitive;
             this.previous = previous;
         }        
 
-        public boolean contains(String name) {
+        public boolean contains(CharSequence name) {
             if (data.containsKey(name)) {
                 return true;
             }
@@ -482,7 +482,7 @@ public class ParserImpl {
             return false;
         }
         
-        public Type getType(String name) {
+        public Type getType(CharSequence name) {
             Type type = data.get(name);
             if (type == null && transitive && previous != null) {
                 type = previous.getType(name);
@@ -490,7 +490,7 @@ public class ParserImpl {
             return type;
         }
 
-        public void put(String name, Type type) {
+        public void put(CharSequence name, Type type) {
             data.put(name, type);
         }
     }   

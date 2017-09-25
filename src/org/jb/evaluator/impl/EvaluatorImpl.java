@@ -176,7 +176,7 @@ public class EvaluatorImpl {
                 }
             case ID:
                 IdExpr id = (IdExpr) expr;
-                Variable var = symtab.get(id.getName().toString());
+                Variable var = symtab.get(id.getName());
                 if (var != null) {
                     return var.getValue();
                 } else {                    
@@ -521,11 +521,11 @@ public class EvaluatorImpl {
         }
     }
 
-    private void error(String message) {
+    private void error(CharSequence message) {
         diagnosticListener.report(Diagnostic.error(0, 0, message));
     }
 
-    private void error(ASTNode node, String message) {
+    private void error(ASTNode node, CharSequence message) {
         diagnosticListener.report(Diagnostic.error(node.getLine(), node.getColumn(), message));
     }
     
@@ -542,7 +542,7 @@ public class EvaluatorImpl {
 
         private boolean transitive;
         private Symtab previous;
-        private Map<String, Variable> data = new TreeMap<>();        
+        private Map<CharSequence, Variable> data = new TreeMap<>();        
 
         public Symtab(Symtab previous, boolean transitive) {
             this.transitive = transitive;
@@ -550,10 +550,10 @@ public class EvaluatorImpl {
         }
 
         public boolean contains(DeclStatement stmt) {
-            return contains(stmt.getDelarationName().toString());
+            return contains(stmt.getDelarationName());
         }
 
-        public boolean contains(String name) {
+        public boolean contains(CharSequence name) {
             if (data.containsKey(name)) {
                 return true;
             }
@@ -563,7 +563,7 @@ public class EvaluatorImpl {
             return false;
         }
         
-        public Variable get(String name) {
+        public Variable get(CharSequence name) {
             Variable var = data.get(name);
             if (var == null && transitive && previous != null) {
                 var = previous.get(name);
@@ -663,7 +663,7 @@ public class EvaluatorImpl {
     
     private class Variable {
 
-        private final String name;
+        private final CharSequence name;
         private final DeclStatement decl;
         private Value value;
         private boolean cached;
@@ -673,7 +673,7 @@ public class EvaluatorImpl {
             this.decl = declaration;
         }
 
-        public String getName() {
+        public CharSequence getName() {
             return name;
         }
 

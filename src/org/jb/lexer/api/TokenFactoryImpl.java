@@ -22,7 +22,10 @@ package org.jb.lexer.api;
      */
     @Override
     public Token create(Token.Kind kind, CharSequence text, int line, int column) {
-        return new Token(kind, text, line, column);
+        // until we use smart charsequences text is always string.
+        // by text.toString() below we guarantee classes like StringBuilder 
+        // (without goot equals and hash) don't get inside
+        return new Token(kind, text.toString(), line, column);
     }
 
     @Override
