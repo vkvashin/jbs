@@ -108,8 +108,8 @@ public class EvaluatorImpl {
         print(Integer.toString(value));
     }
     
-    private void print(float value) {
-        print(Float.toString(value));
+    private void print(double value) {
+        print(Double.toString(value));
     }
     
     private void print(Value value) {
@@ -137,7 +137,7 @@ public class EvaluatorImpl {
             case SEQ_FLOAT:
                 {
                     boolean first = true;
-                    for (float f : value.getFloatArray()) {
+                    for (double f : value.getFloatArray()) {
                         if (first) {
                             first = false;
                         } else {
@@ -169,7 +169,7 @@ public class EvaluatorImpl {
                 }
             case FLOAT:
                 try {
-                    return new Value(Float.parseFloat(((Literal) expr).getText().toString()));
+                    return new Value(Double.parseDouble(((Literal) expr).getText().toString()));
                 } catch (NumberFormatException ex) {
                     error(expr, ex.getLocalizedMessage());
                     return Value.ERROR;
@@ -230,25 +230,25 @@ public class EvaluatorImpl {
     }
 
     private Value evaluateMap(Object array, DeclStatement varDecl, Expr transformation) {        
-        assert (array instanceof int[] || array instanceof float[]);
+        assert (array instanceof int[] || array instanceof double[]);
         // input arrays and its size
         // NB: as to input arrays, we always ise intIn if (array instanceof int[]), otherwise float.
         int[] intIn;
-        float[] floatIn;
+        double[] floatIn;
         final int size;
         if (array instanceof int[]) {
             intIn = (int[]) array;
             size = intIn.length;
             floatIn = null;
         } else {
-            floatIn = (float[]) array;
+            floatIn = (double[]) array;
             size = floatIn.length;
             intIn = null;
         }
-        // With input arrays we sometimes have to switch to float[] and vice versa.
-        // So we always initially try using int[] and switch to float[] as soon as we get float result
+        // With input arrays we sometimes have to switch to double[] and vice versa.
+        // So we always initially try using int[] and switch to double[] as soon as we get float result
         int[] intOut = new int[size];
-        float[] floatOut = null;   
+        double[] floatOut = null;   
         // smart variable:
         int[] idx = new int[1]; // to be able to use mutable index in anonimous class
         Variable smartVar = new Variable(varDecl) {
@@ -269,9 +269,9 @@ public class EvaluatorImpl {
                         break;
                     case FLOAT:
                         if (floatOut == null) {
-                            floatOut = new float[intOut.length];
+                            floatOut = new double[intOut.length];
                             for (int i = 0; i < idx[0]; i++) {
-                                floatOut[i] = (float) intOut[i];
+                                floatOut[i] = (double) intOut[i];
                             }
                             intOut = null; 
                         }
@@ -329,17 +329,17 @@ public class EvaluatorImpl {
     private Value evaluateReduce(Object array, Value defValue, DeclStatement prevDecl, DeclStatement currDecl, Expr transformation) {
         assert isArithmetic(defValue);
         // input arrays and its size
-        assert (array instanceof int[] || array instanceof float[]);
+        assert (array instanceof int[] || array instanceof double[]);
         // NB: as to input arrays, we always ise intIn if (array instanceof int[]), otherwise float.
         int[] intIn;
-        float[] floatIn;
+        double[] floatIn;
         final int size;
         if (array instanceof int[]) {
             intIn = (int[]) array;
             size = intIn.length;
             floatIn = null;
         } else {
-            floatIn = (float[]) array;
+            floatIn = (double[]) array;
             size = floatIn.length;
             intIn = null;
         }
@@ -463,12 +463,12 @@ public class EvaluatorImpl {
         }
     }
 
-    private float evaluatePower(float left, int right) {
+    private double evaluatePower(double left, int right) {
         assert right >= 0;
         if (right < 0) {
             return 0;
         }
-        float result = left;
+        double result = left;
         while (right-- > 1) {
             result *= left;
         }
@@ -505,7 +505,7 @@ public class EvaluatorImpl {
     }
 
     /** except for ^ (power) ! */
-    private float evaluateOperation(BinaryOpExpr.OpKind op, float left, float right) {
+    private double evaluateOperation(BinaryOpExpr.OpKind op, double left, double right) {
         switch (op) {            
             case ADD:
                 return left + right;
@@ -605,11 +605,11 @@ public class EvaluatorImpl {
             this.value = value;
         }
 
-        public Value(float value) {
-            this.value = Float.valueOf(value);
+        public Value(double value) {
+            this.value = Double.valueOf(value);
         }
 
-        public Value(Float value) {
+        public Value(Double value) {
             assert value != null;
             this.value = value;
         }
@@ -619,7 +619,7 @@ public class EvaluatorImpl {
             this.value = value;
         }
 
-        public Value(float[] value) {
+        public Value(double[] value) {
             assert value != null;
             this.value = value;
         }
@@ -627,11 +627,11 @@ public class EvaluatorImpl {
         public Type getType() {
             if (value instanceof Integer) {
                 return Type.INT;
-            } else if (value instanceof Float) {
+            } else if (value instanceof Double) {
                 return Type.FLOAT;
             } else if (value instanceof int[]) {
                 return Type.SEQ_INT;
-            } else if (value instanceof float[]) {
+            } else if (value instanceof double[]) {
                 return Type.SEQ_FLOAT;
             } else if (value == null) {
                 return Type.ERRONEOUS;
@@ -643,16 +643,16 @@ public class EvaluatorImpl {
             return ((Integer) value).intValue();
         }
         
-        public float getFloat() {
-            return ((Float) value).floatValue();
+        public double getFloat() {
+            return ((Double) value).doubleValue();
         }
         
         public int[] getIntArray() {
             return (int[]) value;
         }
         
-        public float[] getFloatArray() {
-            return (float[]) value;
+        public double[] getFloatArray() {
+            return (double[]) value;
         }
 
         @Override
