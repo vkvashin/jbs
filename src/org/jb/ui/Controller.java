@@ -106,8 +106,11 @@ import org.jb.parser.api.Parser;
         currentForegroundTask = foregroundExecutor.submit(new Runnable() {
             @Override
             public void run() {
-                runAstImpl(src);
-                foregroundTaskFinished();
+                try {
+                    runAstImpl(src);
+                } finally {
+                    foregroundTaskFinished();
+                }
             }
         });
     }

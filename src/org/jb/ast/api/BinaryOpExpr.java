@@ -93,8 +93,8 @@ public final class BinaryOpExpr extends Expr {
             return Type.ERRONEOUS;
         }
         if (opKind == OpKind.POW) {
-            if (rightType != Type.INT) {
-                reportError(diagnosticListener, "wrong 2-nd operand in operation ^: should be an integer");
+            if (rightType != Type.INT && rightType != Type.FLOAT) {
+                reportError(diagnosticListener, "wrong 2-nd operand in operation ^: should be an integer or float");
                 return Type.ERRONEOUS;
             }
         }

@@ -11,7 +11,7 @@ public class EvaluatorPerfTest extends EvaluatorTestBase {
 
     @Test
     public void testCompareReducePerf() throws Exception {
-        int cnt = 5000000;
+        int cnt = 50000000;
         String source = 
             "var n = " + cnt + "\n" + 
             "var sequence = map({0, n}, i -> (-1)^i / (2.0 * i + 1))\n" + 
@@ -24,15 +24,15 @@ public class EvaluatorPerfTest extends EvaluatorTestBase {
         time1 = System.currentTimeMillis() - time1;
         
         long time2 = System.currentTimeMillis();
-        float[] map = new float[cnt];
+        double[] map = new double[cnt];
         for (int i = 0; i < cnt; i++) {
-            map[i] = (float) ((i%2 == 0 ? 1 : -1) / (2.0 * i + 1));
+            map[i] = (double) ((i%2 == 0 ? 1 : -1) / (2.0 * i + 1));
         }        
-        float reduce = 0;
+        double reduce = 0;
         for (int i = 0; i < cnt; i++) {
             reduce += map[i];
         }
-        float pi = 4 * reduce;
+        double pi = 4 * reduce;
         time2 = System.currentTimeMillis() - time2;
 
         System.out.println("Script: pi=" + out[0]);
@@ -41,3 +41,4 @@ public class EvaluatorPerfTest extends EvaluatorTestBase {
         System.out.println("Java time " + time2 + "ms");
     }    
 }
+

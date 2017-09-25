@@ -130,6 +130,6 @@ public class ParserTypeTest extends ParserTestBase {
                 "var q = 2 ^ 1.4";
         setDebug(true);
         getAst(source);        
-        assertDiagnosticEquals(0, 3, 23, "wrong 2-nd operand in operation ^*");
+        assertEmptyDiagnostics();
     }
 }
