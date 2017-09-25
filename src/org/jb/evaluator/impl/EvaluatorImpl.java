@@ -43,7 +43,7 @@ public class EvaluatorImpl {
 
     public void execute(ASTNode ast) {
         execurorThread = Thread.currentThread();
-        for( ASTNode node = ast; node != null; node = node.getNextSibling()) {
+        for( ASTNode node = ast; node != null && ! Thread.currentThread().isInterrupted(); node = node.getNextSibling()) {
             executeImpl(node);
         }
     }
@@ -261,6 +261,9 @@ public class EvaluatorImpl {
         symtab.put(smartVar);
         try {
             for (idx[0] = 0; idx[0] < size; idx[0]++) {
+                if (idx[0]%100==0 && Thread.currentThread().isInterrupted()) {
+                    return Value.ERROR;
+                }
                 Value v = evaluate(transformation);
                 Type type = v.getType();
                 switch (type) {                    
@@ -363,6 +366,9 @@ public class EvaluatorImpl {
         symtab.put(currVar);
         try {
             for (idx[0] = 0; idx[0] < size; idx[0]++) {
+                if (idx[0]%100==0 && Thread.currentThread().isInterrupted()) {
+                    return Value.ERROR;
+                }         
                 accumulator[0] = evaluate(transformation);
                 if (accumulator[0].getType() == Type.ERRONEOUS) {
                     // upon error, don't waiste time in further calculations
