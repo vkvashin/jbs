@@ -161,9 +161,9 @@ public class EvaluatorImpl {
             case PAREN:
                 return evaluate(((ParenExpr) expr).getFirstChild());
             case INT:
-                return new Value(((IntLiteral) expr).getValue());
+                return Value.create(((IntLiteral) expr).getValue());
             case FLOAT:
-                return new Value(((FloatLiteral) expr).getValue());
+                return Value.create(((FloatLiteral) expr).getValue());
             case ID:
                 IdExpr id = (IdExpr) expr;
                 Variable var = symtab.get(id.getName());
@@ -244,7 +244,7 @@ public class EvaluatorImpl {
         Variable smartVar = new Variable(varDecl) {
             @Override
             public Value getValue() {
-                return (intIn != null) ? new Value(intIn[idx[0]]) : new Value(floatIn[idx[0]]);
+                return (intIn != null) ? Value.create(intIn[idx[0]]) : Value.create(floatIn[idx[0]]);
             }
         };
         pushSymtab(false);
@@ -280,7 +280,7 @@ public class EvaluatorImpl {
                         return Value.ERROR;
                 }
             }
-            return (floatOut == null) ? new Value(intOut) : new Value(floatOut);
+            return (floatOut == null) ? Value.create(intOut) : Value.create(floatOut);
         } finally {
             popSymtab();
         }
@@ -348,7 +348,7 @@ public class EvaluatorImpl {
         Variable currVar = new Variable(currDecl) {
             @Override
             public Value getValue() {
-                return (intIn != null) ? new Value(intIn[idx[0]]) : new Value(floatIn[idx[0]]);
+                return (intIn != null) ? Value.create(intIn[idx[0]]) : Value.create(floatIn[idx[0]]);
             }
         };
         pushSymtab(false);
@@ -385,7 +385,7 @@ public class EvaluatorImpl {
                     for (int i = 0; i < data.length; i++) {
                         data[i] = first + i;
                     }
-                    return new Value(data);
+                    return Value.create(data);
                 }
             }
         }
@@ -429,13 +429,13 @@ public class EvaluatorImpl {
             case SUB:
             case MUL:
                 if(leftType == Type.INT && rightType == Type.INT) {
-                    return new Value(evaluateOperation(op, leftValue.getInt(), rightValue.getInt()));
+                    return Value.create(evaluateOperation(op, leftValue.getInt(), rightValue.getInt()));
                 } else if(leftType == Type.FLOAT && rightType == Type.FLOAT) {
-                    return new Value(evaluateOperation(op, leftValue.getFloat(), rightValue.getFloat()));
+                    return Value.create(evaluateOperation(op, leftValue.getFloat(), rightValue.getFloat()));
                 } else if(leftType == Type.INT && rightType == Type.FLOAT) {
-                    return new Value(evaluateOperation(op, (float)leftValue.getInt(), rightValue.getFloat()));
+                    return Value.create(evaluateOperation(op, (float)leftValue.getInt(), rightValue.getFloat()));
                 } else if(leftType == Type.FLOAT && rightType == Type.INT) {
-                    return new Value(evaluateOperation(op, leftValue.getFloat(), (float)rightValue.getInt()));
+                    return Value.create(evaluateOperation(op, leftValue.getFloat(), (float)rightValue.getInt()));
                 } else {
                     throw new AssertionError("sholuld never ever get here");
                 }          
@@ -448,9 +448,9 @@ public class EvaluatorImpl {
                     return Value.ERROR;
                 }
                 if(leftType == Type.INT) {
-                    return new Value(evaluatePower(leftValue.getInt(), rightValue.getInt()));
+                    return Value.create(evaluatePower(leftValue.getInt(), rightValue.getInt()));
                 } else if(leftType == Type.FLOAT) {
-                    return new Value(evaluatePower(leftValue.getFloat(), rightValue.getInt()));
+                    return Value.create(evaluatePower(leftValue.getFloat(), rightValue.getInt()));
                 } else {
                     throw new AssertionError("sholuld never ever get here");
                 }
@@ -564,83 +564,109 @@ public class EvaluatorImpl {
      * But from the code readability and reliability we'd better use it than bare Object.
      * So if profiler ever shows that this leads to a bottleneck, we'll (probably) drop it and use bare Object as value.
      */
-    private static class Value {
+    private static abstract class Value {
         
-        private static final Value ERROR = new Value();
-
-        private final Object value;        
-
-        /** use this only for ERRONEOUS types! */
-        private Value() {
-            this.value = null;
-        }
-
-        public Value(Value value) {
-            this.value = value.value;
-        }
-
-        public Value(int value) {
-            this.value = Integer.valueOf(value);
-        }
+        private static final Value ERROR = new ErrorValue();
         
-        public Value(Integer value) {
-            assert value != null;
-            this.value = value;
+        public static Value create(int value) {
+            return new IntValue(value);
         }
 
-        public Value(double value) {
-            this.value = Double.valueOf(value);
+        public static Value create(int[] value) {
+            return new IntArrayValue(value);
         }
 
-        public Value(Double value) {
-            assert value != null;
-            this.value = value;
+        public static Value create(double value) {
+            return new FloatValue(value);
         }
 
-        public Value(int[] value) {
-            assert value != null;
-            this.value = value;
+        public static Value create(double[] value) {
+            return new FloatArrayValue(value);
         }
 
-        public Value(double[] value) {
-            assert value != null;
-            this.value = value;
-        }
-
-        public Type getType() {
-            if (value instanceof Integer) {
-                return Type.INT;
-            } else if (value instanceof Double) {
-                return Type.FLOAT;
-            } else if (value instanceof int[]) {
-                return Type.SEQ_INT;
-            } else if (value instanceof double[]) {
-                return Type.SEQ_FLOAT;
-            } else if (value == null) {
-                return Type.ERRONEOUS;
-            }
-            throw new IllegalStateException("Unexpected vaue class: " + value);
-        }
+        public abstract Type getType();
         
         public int getInt() {
-            return ((Integer) value).intValue();
+            throw new  UnsupportedOperationException();
         }
         
         public double getFloat() {
-            return ((Double) value).doubleValue();
+            throw new  UnsupportedOperationException();
         }
         
         public int[] getIntArray() {
-            return (int[]) value;
+            throw new  UnsupportedOperationException();
         }
         
         public double[] getFloatArray() {
-            return (double[]) value;
+            throw new  UnsupportedOperationException();
         }
+    }
 
+    private static final class ErrorValue extends Value{
         @Override
-        public String toString() {
-            return (value == null) ? "<error>" : value.toString();
+        public Type getType() {
+            return Type.ERRONEOUS;
+        }
+    }
+    
+    private static final class IntValue extends Value {
+        private final int value;
+        public IntValue(int value) {
+            this.value = value;
+        }
+        @Override
+        public int getInt() {
+            return value;
+        }
+        @Override
+        public Type getType() {
+            return Type.INT;
+        }        
+    }
+
+    private static final class IntArrayValue extends Value {
+        private final int[] value;
+        public IntArrayValue(int[] value) {
+            this.value = value;
+        }
+        @Override
+        public int[] getIntArray() {
+            return value;
+        }
+        @Override
+        public Type getType() {
+            return Type.SEQ_INT;
+        }        
+    }
+
+    private static final class FloatValue extends Value {
+        private final double value;
+        public FloatValue(double value) {
+            this.value = value;
+        }
+        @Override
+        public double getFloat() {
+            return value;
+        }
+        @Override
+        public Type getType() {
+            return Type.FLOAT;
+        }        
+    }
+    
+    private static final class FloatArrayValue extends Value {
+        private final double[] value;
+        public FloatArrayValue(double[] value) {
+            this.value = value;
+        }
+        @Override
+        public double[] getFloatArray() {
+            return value;
+        }
+        @Override
+        public Type getType() {
+            return Type.SEQ_FLOAT;
         }        
     }
     
