@@ -328,8 +328,53 @@ public class EvaluatorImpl {
         return Value.ERROR;        
     }
 
-    private Value evaluateReduce(Object array, Value defValue, DeclStatement prev, DeclStatement curr, Expr transformation) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    private Value evaluateReduce(Object array, Value defValue, DeclStatement prevDecl, DeclStatement currDecl, Expr transformation) {
+        assert isArithmetic(defValue);
+        // input arrays and its size
+        assert (array instanceof int[] || array instanceof float[]);
+        // NB: as to input arrays, we always ise intIn if (array instanceof int[]), otherwise float.
+        int[] intIn;
+        float[] floatIn;
+        final int size;
+        if (array instanceof int[]) {
+            intIn = (int[]) array;
+            size = intIn.length;
+            floatIn = null;
+        } else {
+            floatIn = (float[]) array;
+            size = floatIn.length;
+            intIn = null;
+        }
+        // smart variables:
+        Value[] accumulator = new Value[] { defValue }; // to be able to use mutable index in anonimous class
+        Variable prevVar = new Variable(prevDecl) {
+            @Override
+            public Value getValue() {
+                return accumulator[0];
+            }
+        };
+        int[] idx = new int[1]; // to be able to use mutable index in anonimous class
+        Variable currVar = new Variable(currDecl) {
+            @Override
+            public Value getValue() {
+                return (intIn != null) ? new Value(intIn[idx[0]]) : new Value(floatIn[idx[0]]);
+            }
+        };
+        pushSymtab(false);
+        symtab.put(prevVar);
+        symtab.put(currVar);
+        try {
+            for (idx[0] = 0; idx[0] < size; idx[0]++) {
+                accumulator[0] = evaluate(transformation);
+                if (accumulator[0].getType() == Type.ERRONEOUS) {
+                    // upon error, don't waiste time in further calculations
+                    return Value.ERROR;
+                }
+            }
+            return accumulator[0];
+        } finally {
+            popSymtab();
+        }
     }
 
     private Value evaluateSequence(SeqExpr expr) {
@@ -524,6 +569,11 @@ public class EvaluatorImpl {
             return var;
         }
 
+        public void put(Variable var) {
+            put(var.getName(), var);
+        }
+
+        @Deprecated
         public void put(String name, Variable var) {
             data.put(name, var);
         }
@@ -544,7 +594,11 @@ public class EvaluatorImpl {
         private Value() {
             this.value = null;
         }
-        
+
+        public Value(Value value) {
+            this.value = value.value;
+        }
+
         public Value(int value) {
             this.value = Integer.valueOf(value);
         }
@@ -617,6 +671,11 @@ public class EvaluatorImpl {
         private Value value;
         private boolean cached;
 
+        protected Variable(DeclStatement declaration) {
+            this(declaration.getName().toString(), declaration);
+        }
+
+        @Deprecated
         protected Variable(String name, DeclStatement declaration) {
             this.name = name;
             this.decl = declaration;

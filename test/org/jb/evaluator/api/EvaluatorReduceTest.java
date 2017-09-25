@@ -20,15 +20,36 @@ public class EvaluatorReduceTest extends EvaluatorTestBase {
         assertDiagnosticEquals(0, 2, 16, "wrong type*");
     }
     
-//    @Test
-//    public void testReduceTZ() throws Exception {
-//        String source = 
-//            "var n = 5\n" + 
-//            "var sequence = map({0, n}, i -> (-1)^i / (2.0 * i + 1))\n" + 
-//            "var pi = 4 * reduce(sequence, 0, x y -> x + y)\n" +
-//            "out pi";
-//        setDebug(true);
-//        //doTestAST(source, null);
-//        doTestEvaluator(source, null);
-//    }    
+    @Test
+    public void testSimpleReduce1() throws Exception {
+        String source = 
+            "var x = {1, 3}\n" + 
+            "var y = reduce(x, 0, x y -> x+y)\n" + 
+            "out y\n";
+        setDebug(true);
+        doTestEvaluator(source, "6");
+        assertEmptyDiagnostics();
+    }
+    
+    @Test
+    public void testReduceTZ1() throws Exception {
+        String source = 
+            "var n = 5\n" + 
+            "var sequence = map({0, n}, i -> (-1)^i / (2.0 * i + 1))\n" + 
+            "var pi = 4 * reduce(sequence, 0, x y -> x + y)\n" +
+            "out pi";
+        setDebug(true);
+        doTestEvaluator(source, "2.97*");
+    }
+    
+    @Test
+    public void testReduceTZ2() throws Exception {
+        String source = 
+            "var n = 5000\n" + 
+            "var sequence = map({0, n}, i -> (-1)^i / (2.0 * i + 1))\n" + 
+            "var pi = 4 * reduce(sequence, 0, x y -> x + y)\n" +
+            "out pi";
+        setDebug(true);
+        doTestEvaluator(source, "3.14*");
+    }    
 }
