@@ -44,8 +44,8 @@ public class EvaluatorSimpleTest extends EvaluatorTestBase {
             "var y = 2.71\n" + 
             "var z = x + y\n" + 
             "out z\n";
-        //setDebug(true);
-        doTestEvaluator(source, "5.8500*");
+        setDebug(true);
+        doTestEvaluator(source, "5.85*");
     }
     
     @Test    

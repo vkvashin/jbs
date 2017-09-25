@@ -9,7 +9,7 @@ import org.jb.parser.api.*;
  */
 public class EvaluatorTestBase extends ParserTestBase {
 
-    protected void doTestEvaluator(String source, String...expected) throws Exception {
+    protected String[] doTestEvaluator(String source, String...expected) throws Exception {
         ASTNode ast = getAst(source);
         StringBuilder out = new StringBuilder();
         Evaluator evaluator = new Evaluator(out, getTestDiagnosticListener());
@@ -23,5 +23,6 @@ public class EvaluatorTestBase extends ParserTestBase {
         if (expected != null) {
             assertEquals("Executor output differs", expected, actual);
         }
+        return actual;
     }
 }
