@@ -232,7 +232,8 @@ public class EvaluatorImpl {
 
     private Value evaluateMap(Object array, DeclStatement varDecl, Expr transformation) {        
         assert (array instanceof int[] || array instanceof float[]);
-        // input array and its size:
+        // input arrays and its size
+        // NB: as to input arrays, we always ise intIn if (array instanceof int[]), otherwise float.
         int[] intIn;
         float[] floatIn;
         final int size;
@@ -245,9 +246,10 @@ public class EvaluatorImpl {
             size = floatIn.length;
             intIn = null;
         }
-        // output array:
+        // With input arrays we sometimes have to switch to float[] and vice versa.
+        // So we always initially try using int[] and switch to float[] as soon as we get float result
         int[] intOut = new int[size];
-        float[] floatOut = null;
+        float[] floatOut = null;   
         // smart variable:
         String name = varDecl.getName().toString();
         int[] idx = new int[1]; // to be able to use mutable index in anonimous class

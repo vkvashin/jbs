@@ -107,7 +107,11 @@ public class ParserImpl {
         final Token tok = LA(0);
         assert tok.getKind() == Token.Kind.ID;
         consume();
-        symtab.put(tok.getText().toString(), type);
+        String name = tok.getText().toString();
+        if (symtab.contains(name)) {
+            error(tok, "duplicate variable declaration " + name);
+        }
+        symtab.put(name, type);
         return new DeclStatement(tok.getLine(), tok.getColumn(), tok.getText(), null);
     }
 
@@ -312,12 +316,12 @@ public class ParserImpl {
         final Token firstTok = consumeExpected(Token.Kind.MAP);
         consumeExpected(Token.Kind.LPAREN);
         Expr seq = expression();
-        Type varType = seqElementType(seq, true);
-        consumeExpected(Token.Kind.COMMA);
-        DeclStatement var = lambdaVarDecl(varType);
-        consumeExpected(Token.Kind.ARROW);
         pushSymtab(false);
         try {
+            Type varType = seqElementType(seq, true);
+            consumeExpected(Token.Kind.COMMA);
+            DeclStatement var = lambdaVarDecl(varType);
+            consumeExpected(Token.Kind.ARROW);
             symtab.put(var.getName().toString(), Type.INT);
             Expr transformation = expression();
             consumeExpected(Token.Kind.RPAREN);
@@ -335,11 +339,11 @@ public class ParserImpl {
         consumeExpected(Token.Kind.COMMA);
         Expr defValue = expression();
         consumeExpected(Token.Kind.COMMA);
-        DeclStatement prev = lambdaVarDecl(varType);
-        DeclStatement curr = lambdaVarDecl(varType);
-        consumeExpected(Token.Kind.ARROW);
         pushSymtab(false);
         try {       
+            DeclStatement prev = lambdaVarDecl(varType);
+            DeclStatement curr = lambdaVarDecl(varType);
+            consumeExpected(Token.Kind.ARROW);
             symtab.put(prev.getName().toString(), Type.INT);
             symtab.put(curr.getName().toString(), Type.INT);
             Expr transformation = expression();

@@ -239,6 +239,20 @@ public class ParserSimpleTest extends ParserTestBase {
     }    
 
     @Test
+    public void testSimpleMapWithSameVarName() throws Exception {
+        String source
+                = "var n = 500\n"
+                + "var s = map({0, n}, n -> n*2)\n";
+        String[] expected = new String[]{
+            "DECL [1:1] n",
+            
+        };
+        setDebug(true);
+        doTestAST(source, null);
+        assertEmptyDiagnostics();
+    }
+    
+    @Test
     public void testParserFromTZ() throws Exception {
         String source =
             "var n = 500\n" +
@@ -286,4 +300,43 @@ public class ParserSimpleTest extends ParserTestBase {
         doTestAST(source, expected);
         assertEmptyDiagnostics();
     }
+    
+    @Test
+    public void testSimpleReduce1() throws Exception {
+        String source = 
+            "var x = {1, 3}\n" + 
+            "var y = reduce(x, 0, x y -> x+y)\n" + 
+            "out y\n";
+        setDebug(true);
+        String[] expected = new String[] {
+            "DECL [1:1] x",
+            "    SEQ [1:9] ",
+            "        INT [1:10] 1",
+            "        INT [1:13] 3",
+            "DECL [2:1] y",
+            "    REDUCE [2:9] ",
+            "        ID [2:16] x",
+            "        INT [2:19] 0",
+            "        DECL [2:22] x",
+            "        DECL [2:24] y",
+            "        OP [2:29] +",
+            "            ID [2:29] x",
+            "            ID [2:31] y",
+            "OUT [3:1] ",
+            "    ID [3:5] y"
+        };
+        doTestAST(source, expected);
+        assertEmptyDiagnostics();
+    }    
+    
+    @Test
+    public void testSimpleReduceErrorVarsAreSame() throws Exception {
+        String source = 
+            "var x = {1, 3}\n" + 
+            "var y = reduce(x, 0, x x -> x+1)\n" + 
+            "out y\n";
+        setDebug(true);
+        doTestAST(source, null);
+        assertDiagnosticEquals(0, 2, 24, "duplicate variable declaration x");
+    }    
 }

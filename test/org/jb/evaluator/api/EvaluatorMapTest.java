@@ -29,6 +29,17 @@ public class EvaluatorMapTest extends EvaluatorTestBase {
     }
     
     @Test
+    public void testSimpleMapFloat2Int() throws Exception {
+        String source = 
+            "var x = {0, 2}\n" + 
+            "var y = map(x, i -> i+0.1)\n" + 
+            "var z = map(y, i -> 1)\n" + 
+            "out z\n";
+        //setDebug(true);
+        doTestEvaluator(source, "1, 1, 1");
+    }
+    
+    @Test
     public void testSimpleMapIntFloat() throws Exception {
         String source = 
             "var x = {3, 5}\n" + 
