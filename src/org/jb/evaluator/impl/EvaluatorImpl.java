@@ -243,10 +243,24 @@ public class EvaluatorImpl {
         double[] floatOut = null;   
         // smart variable:
         int[] idx = new int[1]; // to be able to use mutable index in anonimous class
+        Value smartValue = new Value() {
+            @Override
+            public Type getType() {
+                return (intIn != null) ? Type.INT : Type.FLOAT;
+            }
+            @Override
+            public int getInt() {
+                return intIn[idx[0]];
+            }
+            @Override
+            public double getFloat() {
+                return floatIn[idx[0]];
+            }
+        };
         Variable smartVar = new Variable(varDecl) {
             @Override
             public Value getValue() {
-                return (intIn != null) ? Value.create(intIn[idx[0]]) : Value.create(floatIn[idx[0]]);
+                return smartValue;
             }
         };
         pushSymtab(false);
@@ -369,10 +383,25 @@ public class EvaluatorImpl {
             }
         };
         int[] idx = new int[1]; // to be able to use mutable index in anonimous class
+
+        Value smartValue = new Value() {
+            @Override
+            public Type getType() {
+                return (intIn != null) ? Type.INT : Type.FLOAT;
+            }
+            @Override
+            public int getInt() {
+                return intIn[idx[0]];
+            }
+            @Override
+            public double getFloat() {
+                return floatIn[idx[0]];
+            }
+        };
         Variable currVar = new Variable(currDecl) {
             @Override
             public Value getValue() {
-                return (intIn != null) ? Value.create(intIn[idx[0]]) : Value.create(floatIn[idx[0]]);
+                return smartValue;
             }
         };
         pushSymtab(false);
@@ -593,7 +622,7 @@ public class EvaluatorImpl {
     private static abstract class Value {
         
         private static final Value ERROR = new ErrorValue();
-        
+
         public static Value create(int value) {
             return new IntValue(value);
         }
