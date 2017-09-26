@@ -9,6 +9,10 @@ import org.junit.Test;
 public class EvaluatorPerfTest extends EvaluatorTestBase {
 
 
+    static {
+        //System.setProperty("jbs.suppress.prepare.expressions", "true");
+    }
+
     @Test
     public void testCompareReducePerf() throws Exception {
         int cnt = 50000000;

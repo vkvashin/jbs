@@ -31,6 +31,8 @@ public class EvaluatorImpl {
     private Symtab symtab;
     
     private static final boolean TRACE = Boolean.getBoolean("jbs.trace");
+    private static final boolean SUPPRESS_PREPARED_EXPRESSIONS = Boolean.getBoolean("jbs.suppress.prepare.expressions");
+    private static final boolean CATCH_PREDPARED_EXCEPTION = Boolean.getBoolean("jbs.catch.expressions");
     
     /** There are some errors that should be already reported by parser; the question is whether to report them  */
     private static final boolean REPORT_PARSER_ERRORS = false;
@@ -219,7 +221,7 @@ public class EvaluatorImpl {
         return Value.ERROR;
     }
 
-    private Value evaluateMap(Object array, DeclStatement varDecl, Expr transformation) {        
+    private Value evaluateMap(Object array, DeclStatement varDecl, Expr transformation) {
         assert (array instanceof int[] || array instanceof double[]);
         // input arrays and its size
         // NB: as to input arrays, we always ise intIn if (array instanceof int[]), otherwise float.
@@ -250,11 +252,12 @@ public class EvaluatorImpl {
         pushSymtab(false);
         symtab.put(smartVar);
         try {
+            Producer<Value> valueProducer = prepareExpressionIfPossible(transformation);
             for (idx[0] = 0; idx[0] < size; idx[0]++) {
                 if (idx[0]%100==0 && Thread.currentThread().isInterrupted()) {
                     return Value.ERROR;
                 }
-                Value v = evaluate(transformation);
+                Value v = valueProducer.produce();
                 Type type = v.getType();
                 switch (type) {                    
                     case INT:
@@ -318,6 +321,22 @@ public class EvaluatorImpl {
         }
         return Value.ERROR;        
     }
+    private Producer<Value> prepareExpressionIfPossible(Expr expr) {
+        Op transfOp = SUPPRESS_PREPARED_EXPRESSIONS ? null : prepareExpr(expr);
+        Producer<Value> valueProducer;
+        if (transfOp != null) {
+            if (transfOp.getReturnType() == Op.ReturnType.INT) {
+                OpI transfOpI = (OpI) transfOp;
+                valueProducer = () -> Value.create(transfOpI.eval());
+            } else {
+                OpF transfOpF = (OpF) transfOp;
+                valueProducer = () -> Value.create(transfOpF.eval());
+            }
+        } else {
+            valueProducer = () -> evaluate(expr);
+        }
+        return valueProducer;
+    }
 
     private Value evaluateReduce(Object array, Value defValue, DeclStatement prevDecl, DeclStatement currDecl, Expr transformation) {
         assert isArithmetic(defValue);
@@ -335,6 +354,11 @@ public class EvaluatorImpl {
             floatIn = (double[]) array;
             size = floatIn.length;
             intIn = null;
+        }
+        if (defValue.getType() == Type.INT) {
+            if (array instanceof double[] || transformation.getType() == Type.FLOAT) {
+                defValue = Value.create((double) defValue.getInt());
+            }
         }
         // smart variables:
         Value[] accumulator = new Value[] { defValue }; // to be able to use mutable index in anonimous class
@@ -355,11 +379,13 @@ public class EvaluatorImpl {
         symtab.put(prevVar);
         symtab.put(currVar);
         try {
+            Producer<Value> valueProducer = prepareExpressionIfPossible(transformation);
+            //Producer<Value> valueProducer = valueProducer = () -> evaluate(transformation);
             for (idx[0] = 0; idx[0] < size; idx[0]++) {
                 if (idx[0]%100==0 && Thread.currentThread().isInterrupted()) {
                     return Value.ERROR;
                 }         
-                accumulator[0] = evaluate(transformation);
+                accumulator[0] = valueProducer.produce();
                 if (accumulator[0].getType() == Type.ERRONEOUS) {
                     // upon error, don't waiste time in further calculations
                     return Value.ERROR;
@@ -686,6 +712,10 @@ public class EvaluatorImpl {
             return name;
         }
 
+        public DeclStatement getDeclaration() {
+            return decl;
+        }
+
         public Value getValue() {
             assert Thread.currentThread() == execurorThread;
             if (!cached) {
@@ -693,6 +723,457 @@ public class EvaluatorImpl {
                 cached = true;
             }
             return value;
+        }
+    }
+
+    private interface Producer<T> {
+        T produce();
+    }
+
+    /**
+     * Creates a tree of operations (Op descendants);
+     * ops work much faster than traversing AST
+     * @param expr
+     * @return
+     */
+    private Op prepareExpr(Expr expr) {
+        if (expr == null) {
+            return null;
+        }
+        ASTNode.NodeKind nodeKind = expr.getNodeKind();
+        switch (nodeKind) {
+            case PAREN:
+                return prepareExpr(((ParenExpr) expr).getFirstChild());
+            case OP:
+                BinaryOpExpr opExpr = (BinaryOpExpr) expr;
+                final BinaryOpExpr.OpKind opKind = opExpr.getOpKind();
+                final Op left = prepareExpr(opExpr.getLeft());
+                final Op right = prepareExpr(opExpr.getRight());
+                if (left == null || right == null) {
+                    return null;
+                }
+                final Op.ReturnType lrt = left.getReturnType();
+                final Op.ReturnType rrt = right.getReturnType();
+                switch (opKind) {
+                    case ADD:
+                        if (lrt == Op.ReturnType.INT && rrt == Op.ReturnType.INT) {
+                            return new AddII((OpI)left, (OpI)right);
+                        } else if (lrt == Op.ReturnType.FLOAT && rrt == Op.ReturnType.FLOAT) {
+                            return new AddFF((OpF)left, (OpF)right);
+                        } else if (lrt == Op.ReturnType.FLOAT && rrt == Op.ReturnType.INT) {
+                            return new AddFI((OpF)left, (OpI)right);
+                        } else if (lrt == Op.ReturnType.INT && rrt == Op.ReturnType.FLOAT) {
+                            return new AddIF((OpI)left, (OpF)right);
+                        } else {
+                            throw new IllegalStateException();
+                        }
+                    case SUB:
+                        if (lrt == Op.ReturnType.INT && rrt == Op.ReturnType.INT) {
+                            return new SubII((OpI)left, (OpI)right);
+                        } else if (lrt == Op.ReturnType.FLOAT && rrt == Op.ReturnType.FLOAT) {
+                            return new SubFF((OpF)left, (OpF)right);
+                        } else if (lrt == Op.ReturnType.FLOAT && rrt == Op.ReturnType.INT) {
+                            return new SubFI((OpF)left, (OpI)right);
+                        } else if (lrt == Op.ReturnType.INT && rrt == Op.ReturnType.FLOAT) {
+                            return new SubIF((OpI)left, (OpF)right);
+                        } else {
+                            throw new IllegalStateException();
+                        }
+                    case MUL:
+                        if (lrt == Op.ReturnType.INT && rrt == Op.ReturnType.INT) {
+                            return new MulII((OpI)left, (OpI)right);
+                        } else if (lrt == Op.ReturnType.FLOAT && rrt == Op.ReturnType.FLOAT) {
+                            return new MulFF((OpF)left, (OpF)right);
+                        } else if (lrt == Op.ReturnType.FLOAT && rrt == Op.ReturnType.INT) {
+                            return new MulFI((OpF)left, (OpI)right);
+                        } else if (lrt == Op.ReturnType.INT && rrt == Op.ReturnType.FLOAT) {
+                            return new MulIF((OpI)left, (OpF)right);
+                        } else {
+                            throw new IllegalStateException();
+                        }
+                    case DIV:
+                        if (lrt == Op.ReturnType.INT && rrt == Op.ReturnType.INT) {
+                            return new DivII((OpI)left, (OpI)right);
+                        } else if (lrt == Op.ReturnType.FLOAT && rrt == Op.ReturnType.FLOAT) {
+                            return new DivFF((OpF)left, (OpF)right);
+                        } else if (lrt == Op.ReturnType.FLOAT && rrt == Op.ReturnType.INT) {
+                            return new DivFI((OpF)left, (OpI)right);
+                        } else if (lrt == Op.ReturnType.INT && rrt == Op.ReturnType.FLOAT) {
+                            return new DivIF((OpI)left, (OpF)right);
+                        } else {
+                            throw new IllegalStateException();
+                        }
+                    case POW:
+                        if (lrt == Op.ReturnType.INT && rrt == Op.ReturnType.INT) {
+                            return new PowII((OpI)left, (OpI)right);
+                        } else if (lrt == Op.ReturnType.FLOAT && rrt == Op.ReturnType.FLOAT) {
+                            return new PowFF((OpF)left, (OpF)right);
+                        } else if (lrt == Op.ReturnType.FLOAT && rrt == Op.ReturnType.INT) {
+                            return new PowFI((OpF)left, (OpI)right);
+                        } else if (lrt == Op.ReturnType.INT && rrt == Op.ReturnType.FLOAT) {
+                            return new PowIF((OpI)left, (OpF)right);
+                        } else {
+                            throw new IllegalStateException();
+                        }
+                    default:
+                        throw new AssertionError(opKind.name());
+                }
+            case ID:
+                IdExpr idExpr = (IdExpr) expr;
+                CharSequence name = idExpr.getName();
+                Variable var = symtab.get(name);
+                if (var == null) {
+                    return null;
+                }
+                Value value = var.getValue();
+                Type type = (value != null) ? value.getType() : idExpr.getType();
+                if (type == Type.INT) {
+                    return new VarI(var);
+                } else if (type == Type.FLOAT) {
+                    return new VarF(var);
+                } else {
+                    return null;
+                }
+            case INT:
+                return new ConstI(((IntLiteral) expr).getValue());
+            case FLOAT:
+                return new ConstF(((FloatLiteral) expr).getValue());
+            case DECL:
+            case OUT:
+            case PRINT:
+            case SEQ:
+            case MAP:
+            case REDUCE:
+            case STRING:
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Op descendants are operations like +, -, *, /
+     * that work faster that traversing and evaluating AST tree.
+     */
+
+    private static abstract class Op {
+        public enum ReturnType {
+            INT,
+            FLOAT
+        }
+        /** Use instead of instanceof checks */
+        public abstract ReturnType getReturnType();
+    }
+
+    private static abstract class OpI extends Op {
+        @Override
+        public ReturnType getReturnType() {
+            return Op.ReturnType.INT;
+        }
+        abstract public int eval();
+    }
+
+    private static abstract class OpF extends Op {
+        @Override
+        public ReturnType getReturnType() {
+            return Op.ReturnType.FLOAT;
+        }
+        abstract public double eval();
+    }
+
+    private static final class ConstI extends OpI {
+        private final int value;
+        public ConstI(int value) {
+            this.value = value;
+        }
+        @Override
+        public int eval() {
+            return value;
+        }
+    }
+
+    private static final class ConstF extends OpF {
+        private final double value;
+        public ConstF(double value) {
+            this.value = value;
+        }
+        @Override
+        public double eval() {
+            return value;
+        }
+    }
+
+    private static abstract class OpII extends OpI {
+        protected final OpI left;
+        protected final OpI right;
+        public OpII(OpI left, OpI right) {
+            this.left = left;
+            this.right = right;
+        }
+    }
+
+    private static abstract class OpFF extends OpF {
+        protected final OpF left;
+        protected final OpF right;
+        public OpFF(OpF left, OpF right) {
+            this.left = left;
+            this.right = right;
+        }
+    }
+
+    private static abstract class OpIF extends OpF {
+        protected final OpI left;
+        protected final OpF right;
+        public OpIF(OpI left, OpF right) {
+            this.left = left;
+            this.right = right;
+        }
+    }
+
+    private static abstract class OpFI extends OpF {
+        protected final OpF left;
+        protected final OpI right;
+        public OpFI(OpF left, OpI right) {
+            this.left = left;
+            this.right = right;
+        }
+    }
+
+    private static final class AddII extends OpII {
+        public AddII(OpI left, OpI right) {
+            super(left, right);
+        }
+        @Override
+        public int eval() {
+            return left.eval() + right.eval();
+        }
+    }
+
+    private static final class AddFF extends OpFF {
+        public AddFF(OpF left, OpF right) {
+            super(left, right);
+        }
+        @Override
+        public double eval() {
+            return left.eval() + right.eval();
+        }
+    }
+
+    private static final class AddIF extends OpIF {
+        public AddIF(OpI left, OpF right) {
+            super(left, right);
+        }
+        @Override
+        public double eval() {
+            return (double) left.eval() + right.eval();
+        }
+    }
+
+    private static final class AddFI extends OpFI {
+        public AddFI(OpF left, OpI right) {
+            super(left, right);
+        }
+        @Override
+        public double eval() {
+            return left.eval() + (double) right.eval();
+        }
+    }
+
+    private static final class SubII extends OpII {
+        public SubII(OpI left, OpI right) {
+            super(left, right);
+        }
+        @Override
+        public int eval() {
+            return left.eval() - right.eval();
+        }
+    }
+
+    private static final class SubFF extends OpFF {
+        public SubFF(OpF left, OpF right) {
+            super(left, right);
+        }
+        @Override
+        public double eval() {
+            return left.eval() - right.eval();
+        }
+    }
+
+    private static final class SubIF extends OpIF {
+        public SubIF(OpI left, OpF right) {
+            super(left, right);
+        }
+        @Override
+        public double eval() {
+            return (double) left.eval() - right.eval();
+        }
+    }
+
+    private static final class SubFI extends OpFI {
+        public SubFI(OpF left, OpI right) {
+            super(left, right);
+        }
+        @Override
+        public double eval() {
+            return left.eval() - (double) right.eval();
+        }
+    }
+
+    private static final class MulII extends OpII {
+        public MulII(OpI left, OpI right) {
+            super(left, right);
+        }
+        @Override
+        public int eval() {
+            return left.eval() * right.eval();
+        }
+    }
+
+    private static final class MulFF extends OpFF {
+        public MulFF(OpF left, OpF right) {
+            super(left, right);
+        }
+        @Override
+        public double eval() {
+            return left.eval() * right.eval();
+        }
+    }
+
+    private static final class MulIF extends OpIF {
+        public MulIF(OpI left, OpF right) {
+            super(left, right);
+        }
+        @Override
+        public double eval() {
+            return (double) left.eval() * right.eval();
+        }
+    }
+
+    private static final class MulFI extends OpFI {
+        public MulFI(OpF left, OpI right) {
+            super(left, right);
+        }
+        @Override
+        public double eval() {
+            return left.eval() * (double) right.eval();
+        }
+    }
+
+    private static final class DivII extends OpII {
+        public DivII(OpI left, OpI right) {
+            super(left, right);
+        }
+        @Override
+        public int eval() {
+            return left.eval() / right.eval();
+        }
+    }
+
+    private static final class DivFF extends OpFF {
+        public DivFF(OpF left, OpF right) {
+            super(left, right);
+        }
+        @Override
+        public double eval() {
+            return left.eval() / right.eval();
+        }
+    }
+
+    private static final class DivIF extends OpIF {
+        public DivIF(OpI left, OpF right) {
+            super(left, right);
+        }
+        @Override
+        public double eval() {
+            return (double) left.eval() / right.eval();
+        }
+    }
+
+    private static final class DivFI extends OpFI {
+        public DivFI(OpF left, OpI right) {
+            super(left, right);
+        }
+        @Override
+        public double eval() {
+            return left.eval() / (double) right.eval();
+        }
+    }
+
+    private static final class PowII extends OpII {
+        public PowII(OpI left, OpI right) {
+            super(left, right);
+        }
+        @Override
+        public int eval() {
+            int l = this.left.eval();
+            int r = this.right.eval();
+            if (l == -1) {
+                return (r % 2 == 0) ? +1 : -1;
+            }
+            return (int) Math.pow(l, r);
+        }
+    }
+
+    private static final class PowFF extends OpFF {
+        public PowFF(OpF left, OpF right) {
+            super(left, right);
+        }
+        @Override
+        public double eval() {
+            return Math.pow(left.eval(), right.eval());
+        }
+    }
+
+    private static final class PowIF extends OpIF {
+        public PowIF(OpI left, OpF right) {
+            super(left, right);
+        }
+        @Override
+        public double eval() {
+            return Math.pow((double)left.eval(), right.eval());
+        }
+    }
+
+    private static final class PowFI extends OpFI {
+        public PowFI(OpF left, OpI right) {
+            super(left, right);
+        }
+        @Override
+        public double eval() {
+            return Math.pow(left.eval(), (double)right.eval());
+        }
+    }
+
+    private final class VarI extends OpI {
+        private final Variable var;
+        public VarI(Variable var) {
+            this.var = var;
+        }
+        @Override
+        public int eval() {
+            Value value = var.getValue();
+            if (value.getType() == Type.INT) { // just in case
+                return var.getValue().getInt();
+            } else {
+                error(var.getDeclaration(), "unexpected type (expected int): " + value.getType());
+                return 0;
+            }
+        }
+    }
+
+    private final class VarF extends OpF {
+        private final Variable var;
+        public VarF(Variable var) {
+            this.var = var;
+        }
+        @Override
+        public double eval() {
+            Value value = var.getValue();
+            if (value.getType() == Type.FLOAT) { // just in case
+                return value.getFloat();
+            } else {
+                error(var.getDeclaration(), "unexpected type (expected float): " + value.getType());
+                return 0;
+            }
         }
     }
 }
