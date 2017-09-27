@@ -17,12 +17,12 @@ public class LexerImpl {
     
     private final InputStreamWrapper is;
     private final TokenFactory tokenFactory;
-    private final DiagnosticListener diagnosticListener;
+    private final DiagnosticListener[] diagnosticListeners;
 
-    public LexerImpl(InputStream is, TokenFactory tokenFactory, DiagnosticListener diagnosticListener) {
+    public LexerImpl(InputStream is, TokenFactory tokenFactory, DiagnosticListener... diagnosticListeners) {
         this.is = new InputStreamWrapper(is);
         this.tokenFactory = tokenFactory;
-        this.diagnosticListener = diagnosticListener;
+        this.diagnosticListeners = diagnosticListeners;
     }
 
     public TokenStream lex() {
@@ -155,7 +155,7 @@ public class LexerImpl {
                     if (Character.isJavaIdentifierStart(c)) {
                         return readIdVarOrFunction(c);
                     } else {
-                        diagnosticListener.report(Diagnostic.error(is.getLine(), is.getColumn(), "unexpected character '" + c + "'"));
+                        reportError("unexpected character '" + c + "'");
                         return null;
                     }                                        
             }
@@ -182,7 +182,7 @@ public class LexerImpl {
                         kind = Token.Kind.FLOAT;
                         sb.append(c);
                     } else {
-                        diagnosticListener.report(Diagnostic.error(line, col, "more than one digital point"));
+                        reportError(line, col, "more than one digital point");
                         consumeWhile((char curr) -> curr == '.' || Character.isDigit(curr));
                         break;
                     }
@@ -200,7 +200,7 @@ public class LexerImpl {
             StringBuilder sb = new StringBuilder();
             for(char c = is.read(); c != '"'; c = is.read()) {
                 if (c == 0) {
-                    diagnosticListener.report(Diagnostic.error(is.getLine(), is.getColumn(), "unterminated string"));
+                    reportError("unterminated string");
                     break;
                 }
                 sb.append(c);
@@ -253,7 +253,17 @@ public class LexerImpl {
             }            
         }
     }
-    
+
+    private void reportError(CharSequence text) {
+        reportError(is.getLine(), is.getColumn(), text);
+    }
+
+    private void reportError(int line, int column, CharSequence text) {
+        for (DiagnosticListener dl : diagnosticListeners) {
+            dl.report(Diagnostic.error(line, column, text));
+        }
+    }
+
     private static boolean isSpace(char c) {
         return c == '\n' || c == '\r' || Character.isSpaceChar(c);
     }

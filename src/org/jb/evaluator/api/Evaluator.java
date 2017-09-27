@@ -13,8 +13,8 @@ public final class Evaluator {
     
     private final EvaluatorImpl runnerImpl;
 
-    public Evaluator(Appendable out, DiagnosticListener diagnosticListener) {
-        runnerImpl = new EvaluatorImpl(out, diagnosticListener);
+    public Evaluator(Appendable out, DiagnosticListener... diagnosticListeners) {
+        runnerImpl = new EvaluatorImpl(out, diagnosticListeners);
     }
     
     public void execute(ASTNode ast) {

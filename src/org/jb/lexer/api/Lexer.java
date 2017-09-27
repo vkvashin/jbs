@@ -18,8 +18,8 @@ public final class Lexer {
         this(is, DefaultDiagnosticListener.getDefaultListener());
     }
 
-    public Lexer(InputStream is, DiagnosticListener diagnosticListener) {
-        lexer = new LexerImpl(is, new TokenFactoryImpl(), diagnosticListener);
+    public Lexer(InputStream is, DiagnosticListener... diagnosticListeners) {
+        lexer = new LexerImpl(is, new TokenFactoryImpl(), diagnosticListeners);
     }
 
     /** Lex the input stream and return token sequence. */

@@ -23,9 +23,9 @@ public class ParserImpl {
     private final DiagnosticListener diagnosticListener;
     private Symtab symtab;
 
-    public ParserImpl(TokenStream ts, DiagnosticListener errorListener) throws TokenStreamException {
+    public ParserImpl(TokenStream ts, DiagnosticListener... errorListeners) throws TokenStreamException {
         tokens = new ZeroLookaheadTokenBuffer(ts); //WindowTokenBuffer(ts, 1, 4096);
-        this.diagnosticListener = errorListener;
+        this.diagnosticListener = new CombinedDiagnosticListener(errorListeners);
         symtab = new Symtab(null, false);
     }
 
@@ -507,5 +507,18 @@ public class ParserImpl {
         public void put(CharSequence name, Type type) {
             data.put(name, type);
         }
-    }   
+    }
+
+    public class CombinedDiagnosticListener implements DiagnosticListener {
+        private final DiagnosticListener[] listeners;
+        public CombinedDiagnosticListener(DiagnosticListener[] listeners) {
+            this.listeners = listeners;
+        }
+        @Override
+        public void report(Diagnostic issue) {
+            for (DiagnosticListener l : listeners) {
+                l.report(issue);
+            }
+        }
+    }
 }

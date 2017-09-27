@@ -19,7 +19,7 @@ public final class Parser {
         return parse(ts, DefaultDiagnosticListener.getDefaultListener());
     }
 
-    public ASTNode parse(TokenStream ts, DiagnosticListener errorListener) throws TokenStreamException {
-        return new ParserImpl(ts, errorListener).parse();
+    public ASTNode parse(TokenStream ts, DiagnosticListener... errorListeners) throws TokenStreamException {
+        return new ParserImpl(ts, errorListeners).parse();
     }
 }

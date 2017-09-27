@@ -4,6 +4,7 @@ import java.awt.event.*;
 import java.awt.*;
 import java.net.URL;
 import javax.swing.*;
+import static javax.swing.Action.SMALL_ICON;
 
 /**
  *
@@ -15,7 +16,9 @@ public class Actions {
     /*package*/ static final RunAction RUN = new RunAction();
     /*package*/ static final StopAction STOP = new StopAction();
     /*package*/ static final AstAction AST = new AstAction();
-    
+    /*package*/ static final AutorunAction AUTORUN = new AutorunAction();
+    /*package*/ static final ProceedOnError PROCEED_ON_ERROR = new ProceedOnError();
+
     /*package*/ static class ExitAction extends AbstractAction {
         public ExitAction() {
             super("Exit");
@@ -54,7 +57,7 @@ public class Actions {
         }
         @Override
         public void actionPerformed(ActionEvent e) {
-            Controller.getInstance().stopForegroundTask();
+            Controller.getInstance().stop();
         }
     }
     
@@ -64,11 +67,46 @@ public class Actions {
             putValue(SMALL_ICON, createIcon("/org/jb/ui/resources/ast.gif"));
         }
         public char getMnemonic() {
-            return 'T';
+            return 'A';
         }
         @Override
         public void actionPerformed(ActionEvent e) {
             Controller.getInstance().showAstInOutputWindow();
+        }
+    }
+
+    /*package*/ static class AutorunAction extends AbstractAction {
+        public AutorunAction() {
+            super("Autorun");
+        }
+        public char getMnemonic() {
+            return 'A';
+        }
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            Controller.getInstance().toggleAutorun();
+            if (Controller.getInstance().isAutorun()) {
+                RUN.setEnabled(false);
+            }
+        }
+        public boolean isChecked() {
+            return Controller.getInstance().isAutorun();
+        }
+    }
+
+    /*package*/ static class ProceedOnError extends AbstractAction {
+        public ProceedOnError() {
+            super("Proceed on error");
+        }
+        public char getMnemonic() {
+            return 'P';
+        }
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            Controller.getInstance().toggleProceedOnError();
+        }
+        public boolean isChecked() {
+            return Controller.getInstance().isProceedOnError();
         }
     }
 

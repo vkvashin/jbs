@@ -33,18 +33,7 @@ import javax.swing.text.StyleConstants;
 
     private final EditorPane editorPane;
     private final JScrollPane scroller;
-    private final javax.swing.Timer docUpdateTimer;    
     private final ErrorHighlighter errorHighlighter;
-    
-    /**
-     * Incremented each time we schedule a syntax check.
-     * When the check is done in a separate thread, and we switch to EDT to display errors,
-     * we check whether this number is still the same. If it is not, we won't show errors -
-     * they are already outdated.
-     * 
-     * Should be accessed from EDT only! 
-     */
-    private int updateId = 0;
 
     public EditorWindow() {
         editorPane = new EditorPane();
@@ -53,58 +42,19 @@ import javax.swing.text.StyleConstants;
         scroller = new JScrollPane(editorPane);
         setLayout(new BorderLayout());
         add(scroller, BorderLayout.CENTER);
-        docUpdateTimer = new javax.swing.Timer(2000, new ActionListener() {            
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                assert SwingUtilities.isEventDispatchThread();
-                Controller.getInstance().scheduleSyntaxCheck(editorPane.getText(), ++updateId);
-            }
-        });
-        docUpdateTimer.setRepeats(false);
-        editorPane.getDocument().addDocumentListener(new DocumentListener() {            
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                documentUpdated();
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                documentUpdated();
-            }
-
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                documentUpdated();
-            }
-            private void documentUpdated() {
-                // Here we use javax.swing.Timer instead of java.util.concurrency staff
-                // because javax.swing.Timer raises its event in EDT.
-                // This allows us not to safely make editor content copy
-                // and at the same time to do this only when necessary.
-                docUpdateTimer.stop();
-                docUpdateTimer.start();
-            }
-        });
     }
 
     public String getText() {
         assert SwingUtilities.isEventDispatchThread();
         return editorPane.getText();
     }
-    
-    public void underlineErrors(List<Diagnostic> errors, final int updateId) {
-        if (SwingUtilities.isEventDispatchThread()) {
-            underlineErrorsImpl(errors, updateId);
-        } else {
-            SwingUtilities.invokeLater(() -> underlineErrorsImpl(errors, updateId));
-        }
+
+    public void addDocumentListener(DocumentListener listener) {
+        editorPane.getDocument().addDocumentListener(listener);
     }
-    
-    public void underlineErrorsImpl(List<Diagnostic> diagnostics, final int updateId) {
+
+    public void underlineErrors(List<Diagnostic> diagnostics) {
         assert SwingUtilities.isEventDispatchThread();
-        if (updateId != this.updateId) {
-            return;
-        }        
         if (diagnostics.isEmpty()) {
             errorHighlighter.setErrors(Collections.emptyList());
             return;
@@ -138,6 +88,10 @@ import javax.swing.text.StyleConstants;
                 int offset = lastOffset + diag.getColumn();
                 int start = javax.swing.text.Utilities.getWordStart(editorPane, offset);
                 int end = javax.swing.text.Utilities.getWordEnd(editorPane, offset);
+                if ((end - start) == 1 && text.charAt(start) == '\n') {
+                    start--;
+                    end--;
+                }
                 errors.add(new Error(diag.getLevel(), start, end, diag.getMessage().toString()));
             }
         } catch (BadLocationException ex) {

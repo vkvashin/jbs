@@ -74,6 +74,21 @@ import java.io.*;
 
         menu.add(runMenu);
 
+        JMenu optionsMenu = new JMenu("Options");
+        optionsMenu.setMnemonic('O');
+
+        JCheckBoxMenuItem autorunItem = new JCheckBoxMenuItem(Actions.AUTORUN);
+        autorunItem.setMnemonic(Actions.AUTORUN.getMnemonic());
+        autorunItem.setState(Actions.AUTORUN.isChecked());
+        optionsMenu.add(autorunItem);
+
+        JCheckBoxMenuItem proceedOnErrorItem = new JCheckBoxMenuItem(Actions.PROCEED_ON_ERROR);
+        proceedOnErrorItem.setMnemonic(Actions.PROCEED_ON_ERROR.getMnemonic());
+        proceedOnErrorItem.setState(Actions.PROCEED_ON_ERROR.isChecked());
+        optionsMenu.add(proceedOnErrorItem);
+
+        menu.add(optionsMenu);
+
         return menu;
-    } 
+    }
 }

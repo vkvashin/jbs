@@ -20,7 +20,7 @@ import org.jb.ast.diagnostics.DiagnosticListener;
 public class EvaluatorImpl {
     
     private final Appendable out;
-    private final DiagnosticListener diagnosticListener;
+    private final DiagnosticListener[] diagnosticListeners;
     
     // Thread safety: we assume that all fields in variables are accessed from the single executor's thread
     // This is asserted in several places.
@@ -37,9 +37,9 @@ public class EvaluatorImpl {
     /** There are some errors that should be already reported by parser; the question is whether to report them  */
     private static final boolean REPORT_PARSER_ERRORS = false;
 
-    public EvaluatorImpl(Appendable out, DiagnosticListener diagnosticListener) {
+    public EvaluatorImpl(Appendable out, DiagnosticListener... diagnosticListeners) {
         this.out = out;
-        this.diagnosticListener = diagnosticListener;
+        this.diagnosticListeners = diagnosticListeners;
         symtab = new Symtab(null, false);
     }
 
@@ -560,11 +560,15 @@ public class EvaluatorImpl {
     }
 
     private void error(CharSequence message) {
-        diagnosticListener.report(Diagnostic.error(0, 0, message));
+        for (DiagnosticListener dl : diagnosticListeners) {
+            dl.report(Diagnostic.error(0, 0, message));
+        }
     }
 
     private void error(ASTNode node, CharSequence message) {
-        diagnosticListener.report(Diagnostic.error(node.getLine(), node.getColumn(), message));
+        for (DiagnosticListener dl : diagnosticListeners) {
+            dl.report(Diagnostic.error(node.getLine(), node.getColumn(), message));
+        }
     }
     
     private void pushSymtab(boolean transitive) {
