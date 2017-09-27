@@ -51,10 +51,6 @@ import java.io.*;
         JMenu fileMenu = new JMenu("File");
         fileMenu.setMnemonic('F');
 
-        JMenuItem aboutItem = new JMenuItem(Actions.ABOUT);
-        aboutItem.setMnemonic(Actions.ABOUT.getMnemonic());
-        fileMenu.add(aboutItem);
-        
         JMenuItem exitItem = new JMenuItem(Actions.EXIT);
         exitItem.setMnemonic(Actions.EXIT.getMnemonic());
         fileMenu.add(exitItem);

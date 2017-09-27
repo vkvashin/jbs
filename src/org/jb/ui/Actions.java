@@ -11,24 +11,11 @@ import javax.swing.*;
  */
 public class Actions {
     
-    /*package*/ static final AboutAction ABOUT = new AboutAction();
     /*package*/ static final ExitAction EXIT = new ExitAction();
     /*package*/ static final RunAction RUN = new RunAction();
     /*package*/ static final StopAction STOP = new StopAction();
     /*package*/ static final AstAction AST = new AstAction();
     
-    /*package*/ static class AboutAction extends AbstractAction {
-        public AboutAction() {
-            super("About");
-        }
-        public char getMnemonic() {
-            return 'A';
-        }
-        @Override
-        public void actionPerformed(ActionEvent e) {            
-        }        
-    }
-
     /*package*/ static class ExitAction extends AbstractAction {
         public ExitAction() {
             super("Exit");
