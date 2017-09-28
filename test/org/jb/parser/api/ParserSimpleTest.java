@@ -347,5 +347,43 @@ public class ParserSimpleTest extends ParserTestBase {
         setDebug(true);
         doTestAST(source, null);
         assertDiagnosticEquals(0, 1, 9, "integer out of limits");
-    }    
+    }
+
+    @Test
+    public void testPK1() throws Exception {
+        String source =
+            "out 1-1";
+        //setDebug(true);
+        doTestAST(source, new String[] {
+            "OUT [1:1] ",
+            "    OP [1:5] -",
+            "        INT [1:5] 1",
+            "        INT [1:7] 1"
+        });
+        assertEmptyDiagnostics();
+    }
+
+    @Test
+    public void testPK2() throws Exception {
+        String source =
+            "var x = -1";
+        //setDebug(true);
+        doTestAST(source, new String[] {
+            "DECL [1:1] x",
+            "    INT [1:9] -1"
+        });
+        assertEmptyDiagnostics();
+    }
+
+    @Test
+    public void testPK3() throws Exception {
+        String source =
+            "var x = - 1";
+        setDebug(true);
+        doTestAST(source, new String[] {
+            "DECL [1:1] x",
+            "    INT [1:9] - 1"
+        });
+        assertEmptyDiagnostics();
+    }
 }

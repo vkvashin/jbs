@@ -32,7 +32,8 @@ public class LexerSimpleTest  extends LexerTestBase {
         doSimpleTest("1 2 3.14 -2.7", createRefTokens(Token.Kind.INT, "1", 1, 1,
             Token.Kind.INT, "2", 1, 3,
             Token.Kind.FLOAT, "3.14", 1, 5,
-            Token.Kind.FLOAT, "-2.7", 1, 10
+            Token.Kind.SUB, null, 1, 10,
+            Token.Kind.FLOAT, "2.7", 1, 11
         ));
         assertEmptyDiagnostics();
     }
@@ -84,6 +85,17 @@ public class LexerSimpleTest  extends LexerTestBase {
         ));
         assertEmptyDiagnostics();
     }
+
+    @Test
+    public void testPK() throws Exception {
+        //setDebug(true);
+        doSimpleTest("1-1", createRefTokens(
+            Token.Kind.INT, "1", 1, 1,
+            Token.Kind.SUB, null, 1, 2,
+            Token.Kind.INT, "1", 1, 3
+        ));
+        assertEmptyDiagnostics();
+    }
     
     @Test
     public void testFromTZ() throws Exception {
@@ -112,7 +124,8 @@ public class LexerSimpleTest  extends LexerTestBase {
             Token.Kind.ID, "i", 3, 28, 
             Token.Kind.ARROW, null, 3, 30, 
             Token.Kind.LPAREN, null, 3, 33, 
-            Token.Kind.INT, "-1" , 3, 34, 
+            Token.Kind.SUB, null , 3, 34,
+            Token.Kind.INT, "1" , 3, 35,
             Token.Kind.RPAREN, null, 3, 36, 
             Token.Kind.POW, null, 3, 37, 
             Token.Kind.ID, "i" , 3, 38, 

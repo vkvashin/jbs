@@ -195,6 +195,17 @@ public class ParserImpl {
                 return map();
             case REDUCE:
                 return reduce();
+            case SUB:
+                consume();
+                final Token tok = LA(0);
+                switch (tok.getKind()) {
+                    case INT:
+                        return intLiteral(firstTok);
+                    case FLOAT:
+                        return floatLiteral(firstTok);
+                    default:
+                        throw new SynaxError(firstTok, "unexpected token: " + tok.getText() + " expected integer or float");
+                }
             default:
                 throw new SynaxError(firstTok, "unexpected token: " + firstTok.getText() + " expected expression");
         }
@@ -233,12 +244,23 @@ public class ParserImpl {
     }
 
     private IntLiteral intLiteral() throws SynaxError {
+        return intLiteral(null);
+    }
+
+    private IntLiteral intLiteral(Token signTok) throws SynaxError {
         final Token tok = LA(0);
         consume();
         assert tok.getKind() == Token.Kind.INT;
         try {
             int value = Integer.parseInt(tok.getText().toString());
-            return new IntLiteral(tok.getLine(), tok.getColumn(), tok.getText(), value);
+            if (signTok == null) {
+            } else {
+            }
+            if (signTok == null) {
+                return new IntLiteral(tok.getLine(), tok.getColumn(), tok.getText(), value);
+            } else {
+                return new IntLiteral(signTok.getLine(), signTok.getColumn(), negationText(tok, signTok), -value);
+            }
         } catch (NumberFormatException e) {
             // e.getMessage() returns meaningless "for XXXXXX" where XXXXXX is the text being parsed
             // lexer already checked syntax, but not the max/min =>
@@ -247,16 +269,38 @@ public class ParserImpl {
     }
 
     private FloatLiteral floatLiteral() throws SynaxError {
+        return floatLiteral(null);
+    }
+
+    private FloatLiteral floatLiteral(Token signTok) throws SynaxError {
         final Token tok = LA(0);
         consume();
         assert tok.getKind() == Token.Kind.FLOAT;
         try {
             double value = Double.parseDouble(tok.getText().toString());
-            return new FloatLiteral(tok.getLine(), tok.getColumn(), tok.getText(), value);
+            if (signTok == null) {
+                return new FloatLiteral(tok.getLine(), tok.getColumn(), tok.getText(), value);
+            } else {
+                return new FloatLiteral(signTok.getLine(), signTok.getColumn(), negationText(tok, signTok), -value);
+            }
         } catch (NumberFormatException e) {
             // e.getMessage() returns meaningless "for XXXXXX" where XXXXXX is the text being parsed
             // lexer already checked syntax, but not the max/min =>
             throw new SynaxError(tok, "float number or its precision out of limits");
+        }
+    }
+
+    private CharSequence negationText(Token tok, Token signTok) {
+        if (signTok.getLine() == tok.getLine()) {
+            int spaces = tok.getColumn()  - signTok.getColumn() - 1;
+            StringBuilder sb = new StringBuilder(signTok.getText());
+            while (spaces-- > 0) {
+                sb.append(' ');
+            }
+            sb.append(tok.getText());
+            return sb;
+        } else {
+            return "" + signTok.getText() + tok.getText();
         }
     }
 

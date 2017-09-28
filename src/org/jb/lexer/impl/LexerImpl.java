@@ -131,7 +131,7 @@ public class LexerImpl {
                 case '9':
                     return readNumber(c);
                 case '-':
-                    return readArrowOpOrNumber(c);
+                    return readArrowOp(c);
                 case '+':
                 case '*':
                 case '/':
@@ -237,16 +237,13 @@ public class LexerImpl {
             }
         }
 
-        private Token readArrowOpOrNumber(char c) throws IOException, TokenStreamException {
+        private Token readArrowOp(char c) throws IOException, TokenStreamException {
             assert c == '-';
             c = is.read();
             if (c == 0) {
                 return tokenFactory.createFixed(Token.Kind.SUB, is.getLine(), is.getColumn());
             } else if (c == '>') {
                 return tokenFactory.createFixed(Token.Kind.ARROW, is.getLine(), is.getColumn() - 1);
-            } else if(Character.isDigit(c)) {
-                is.unread(c);
-                return readNumber('-');
             } else {
                 is.unread(c);
                 return tokenFactory.createFixed(Token.Kind.SUB, is.getLine(), is.getColumn());
