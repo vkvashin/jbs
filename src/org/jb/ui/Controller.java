@@ -144,6 +144,8 @@ import org.jb.parser.api.Parser;
             printer.printAst(ast);
         } catch (UnsupportedEncodingException | TokenStreamException ex) {
             outputWindow.printErr(ex.getLocalizedMessage());
+        } catch (Throwable ex) {
+            outputWindow.printErr("Unexpected error: " + ex.getLocalizedMessage());
         }
     }
 
@@ -179,6 +181,10 @@ import org.jb.parser.api.Parser;
             evaluator.execute(ast);
         } catch (UnsupportedEncodingException | TokenStreamException ex) {
             outputWindow.printErr(ex.getLocalizedMessage());
+        } catch (OutOfMemoryError ex) {
+            outputWindow.printErr("Insufficient memory to complete the operation");
+        } catch (Throwable ex) {
+            outputWindow.printErr("Unexpected error: " + ex.getLocalizedMessage());
         }
     }
 
@@ -225,6 +231,10 @@ import org.jb.parser.api.Parser;
                     Evaluator evaluator = new Evaluator(
                             outputWindow.getOutputAsAppendable(), listeners);
                     evaluator.execute(ast);
+                } catch (OutOfMemoryError ex) {
+                    outputWindow.printErr("Insufficient memory to complete the operation");
+                } catch (Throwable ex) {
+                    outputWindow.printErr("Unexpected error: " + ex.getLocalizedMessage());
                 } finally {
                     SwingUtilities.invokeLater(() -> Actions.STOP.setEnabled(false));
                 }
