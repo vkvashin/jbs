@@ -24,6 +24,7 @@ import org.jb.ast.diagnostics.DiagnosticListener;
     public OutputWindow() {
         textArea = new JTextPane();
         textArea.setFont(new Font("monospaced", Font.PLAIN, 14));
+        textArea.setEditable(false);
         scroller = new JScrollPane(textArea);
         setLayout(new BorderLayout());
         add(scroller, BorderLayout.CENTER);

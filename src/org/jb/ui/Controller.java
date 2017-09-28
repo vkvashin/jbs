@@ -4,14 +4,11 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -37,14 +34,22 @@ import org.jb.parser.api.Parser;
     
     private volatile EditorWindow editorWindow;
     private volatile OutputWindow outputWindow;
-    
-    private final ThreadPoolExecutor explicitTaskExecutor;
-    private final BlockingQueue<Runnable> explicitTaskQueue;
-    private volatile Future<?> currentExplicitTask;
-    
-    private final ThreadPoolExecutor autoTasksExecutor;
-    private final BlockingQueue<Runnable> autoTasksQueue;
-    private volatile Future<?> currentAutoTask;
+
+    // When autorun is OFF, calculations are launched explicitly.
+    // In this mode, if a calculation takes long, user can edit text,
+    // and get syntax errors on the fly - and all these should not stop calculation.
+    // That's why we need 2 thread pools and 2 current tasks.
+    // In automatic mode, it everything is more simple
+
+    // If autorun is ON, only this pair is used;
+    // if autorun is OFF, it is used for explicit actions
+    private final ThreadPoolExecutor longTaskExecutor;
+    private volatile Future<?> currentLongTask;
+
+    // If autorun is ON, it is never used;
+    // if it is OFF, used for automatic symtax check
+    private final ThreadPoolExecutor autoLightWeightTaskExecutor;
+    private volatile Future<?> currentLightWeightAutoTask;
 
     private volatile boolean autorun = true;
     private volatile boolean proceedOnError = false;
@@ -61,15 +66,20 @@ import org.jb.parser.api.Parser;
     private final javax.swing.Timer docUpdateTimer;
 
     public Controller() {
-        explicitTaskQueue = new ArrayBlockingQueue(1000);
-        explicitTaskExecutor = new ThreadPoolExecutor(1, 1, 30, TimeUnit.SECONDS, explicitTaskQueue);
-        autoTasksQueue = new ArrayBlockingQueue(1000);
-        autoTasksExecutor = new ThreadPoolExecutor(1, 1, 30, TimeUnit.SECONDS, autoTasksQueue);
+        longTaskExecutor = new ThreadPoolExecutor(1, 1, 30, TimeUnit.SECONDS, new ArrayBlockingQueue(1000));
+        autoLightWeightTaskExecutor = new ThreadPoolExecutor(1, 1, 30, TimeUnit.SECONDS, new ArrayBlockingQueue(1000));
         docUpdateTimer = new javax.swing.Timer(2000, new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 assert SwingUtilities.isEventDispatchThread();
-                scheduleSyntaxCheckOrRun(editorWindow.getText(), ++updateId);
+                if (autorun) {
+                    cancelLongTask();
+                    submitLongTask(() -> syntaxCheckOrRun(editorWindow.getText(), updateId, true));
+                } else {
+                    cancelLightweightTask();
+                    submitLightweightTask(() -> syntaxCheckOrRun(editorWindow.getText(), updateId, false));
+
+                }
             }
         });
     }
@@ -122,15 +132,10 @@ import org.jb.parser.api.Parser;
     public void showAstInOutputWindow() {
         assert SwingUtilities.isEventDispatchThread();
         outputWindow.clear();
-        explicitTaskStarted();
         final String src = editorWindow.getText();
-        currentExplicitTask = explicitTaskExecutor.submit(new Runnable() {
-            @Override
-            public void run() {
-                showAstInOutputWindowImpl(src);
-                explicitTaskFinished();
-            }
-        });
+        // the task isn't actually long, but it is explicit => use longTaskExecutor
+        cancelLongTask();
+        submitLongTask(() -> showAstInOutputWindowImpl(src));
     }
     
     private void showAstInOutputWindowImpl(String src) {
@@ -155,18 +160,8 @@ import org.jb.parser.api.Parser;
     public void runAst() {
         assert SwingUtilities.isEventDispatchThread();
         outputWindow.clear();
-        explicitTaskStarted();
         final String src = editorWindow.getText();
-        currentExplicitTask = explicitTaskExecutor.submit(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    runAstImpl(src);
-                } finally {
-                    explicitTaskFinished();
-                }
-            }
-        });
+        submitLongTask(() -> runAstImpl(src));
     }
 
     private void runAstImpl(String src) {
@@ -188,24 +183,7 @@ import org.jb.parser.api.Parser;
         }
     }
 
-    /** 
-     * Schedules a syntax check of text in editor.
-     * If previous check has been scheduled, it will be canceled.
-     */
-    private void scheduleSyntaxCheckOrRun(final String source, final int updateId) {
-        Future<?> prev = currentAutoTask;
-        if (prev != null) {
-            prev.cancel(true);
-        }
-        currentAutoTask = autoTasksExecutor.submit(new Runnable() {
-            @Override
-            public void run() {
-                syntaxCheckOrRun(source, updateId);
-            }
-        });
-    }
-
-    private void syntaxCheckOrRun(String source, final int updateId) {
+    private void syntaxCheckOrRun(String source, final int updateId, boolean run) {
         final List<Diagnostic> diagnostics = new ArrayList<>();
         DiagnosticListener myListener = new DiagnosticListener() {
             @Override
@@ -213,11 +191,11 @@ import org.jb.parser.api.Parser;
                 diagnostics.add(issue);
             }
         };
-        DiagnosticListener[] listeners = autorun ?
+        DiagnosticListener[] listeners = run ?
                 new DiagnosticListener[] {myListener, outputWindow.getDiagnosticListener()} :
                 new DiagnosticListener[] {myListener};
         try {
-            if (autorun) {
+            if (run) {
                 outputWindow.clear();                
             }
             InputStream is = getInputStream(source);
@@ -225,7 +203,7 @@ import org.jb.parser.api.Parser;
             TokenStream ts = lexer.lex();
             Parser parser = new Parser();
             ASTNode ast = parser.parse(ts, listeners);
-            if (autorun && (diagnostics.isEmpty() || proceedOnError)) {
+            if (run && (diagnostics.isEmpty() || proceedOnError)) {
                 SwingUtilities.invokeLater(() -> Actions.STOP.setEnabled(true));
                 try {
                     Evaluator evaluator = new Evaluator(
@@ -250,18 +228,10 @@ import org.jb.parser.api.Parser;
                 System.out.println(d.toString());
             }
         }
-        underlineErrors(diagnostics, updateId);
+        runInEDT(() -> underlineErrors(diagnostics, updateId));
     }
 
     private void underlineErrors(List<Diagnostic> diagnostics, final int updateId) {
-        if (SwingUtilities.isEventDispatchThread()) {
-            underlineErrorsImpl(diagnostics, updateId);
-        } else {
-            SwingUtilities.invokeLater(() -> underlineErrorsImpl(diagnostics, updateId));
-        }
-    }
-
-    private void underlineErrorsImpl(List<Diagnostic> diagnostics, final int updateId) {
         assert SwingUtilities.isEventDispatchThread();
         if (updateId != this.updateId) {
             return;
@@ -270,44 +240,54 @@ import org.jb.parser.api.Parser;
     }
 
     public void stop() {
-        Future<?> task = currentExplicitTask;
-        if (task != null) {
-            task.cancel(true);
-        }
-        if (autorun) {
-            task = currentAutoTask;
-            if (task != null) {
-                task.cancel(true);
-            }
+        cancelLongTask();
+    }
+
+    private void runInEDT(Runnable task) {
+        if (SwingUtilities.isEventDispatchThread()) {
+            task.run();
+        } else {
+            SwingUtilities.invokeLater(task);
         }
     }
 
-    private void explicitTaskStarted() {
-        Runnable r = () -> {
+    private void submitLongTask(Runnable task) {
+        runInEDT(() -> {
             Actions.AST.setEnabled(false);
             Actions.RUN.setEnabled(false);
             Actions.STOP.setEnabled(true);
-        };
-        if (SwingUtilities.isEventDispatchThread()) {
-            r.run();
-        } else {
-            SwingUtilities.invokeLater(r);
+        });
+        currentLongTask = longTaskExecutor.submit(() -> {
+            try {
+                task.run();
+            } finally {
+                runInEDT(() -> {
+                    Actions.AST.setEnabled(true);
+                    Actions.RUN.setEnabled(!isAutorun());
+                    Actions.STOP.setEnabled(false);
+                });
+            }
+        });
+    }
+
+    private void cancelLongTask() {
+        Future<?> task = currentLongTask;
+        if (task != null) {
+            task.cancel(true);
         }
     }
 
-    private void explicitTaskFinished() {
-        Runnable r = () -> { 
-            Actions.AST.setEnabled(true);
-            Actions.RUN.setEnabled(!isAutorun());
-            Actions.STOP.setEnabled(false);
-        };
-        if (SwingUtilities.isEventDispatchThread()) {
-            r.run();
-        } else {
-            SwingUtilities.invokeLater(r);
+    private void submitLightweightTask(Runnable r) {
+        currentLightWeightAutoTask = autoLightWeightTaskExecutor.submit(r);
+    }
+
+    private void cancelLightweightTask() {
+        Future<?> task = currentLightWeightAutoTask;
+        if (task != null) {
+            task.cancel(true);
         }
     }
-    
+
     private InputStream getInputStream(String text) throws UnsupportedEncodingException {
         return new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8.name()));
     }
@@ -360,6 +340,7 @@ import org.jb.parser.api.Parser;
 
     public void toggleAutorun() {
         autorun = ! autorun;
+        Actions.RUN.setEnabled(!autorun);
     }
 
     public boolean isProceedOnError() {
