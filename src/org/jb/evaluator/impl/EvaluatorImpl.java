@@ -266,7 +266,7 @@ public class EvaluatorImpl {
         pushSymtab(false);
         symtab.put(smartVar);
         try {
-            Producer<Value> valueProducer = prepareExpressionIfPossible(transformation);
+            Producer<Value> valueProducer = prepareExpressionIfPossible(transformation, smartVar);
             for (idx[0] = 0; idx[0] < size; idx[0]++) {
                 if (idx[0]%100==0 && Thread.currentThread().isInterrupted()) {
                     return Value.ERROR;
@@ -335,8 +335,8 @@ public class EvaluatorImpl {
         }
         return Value.ERROR;        
     }
-    private Producer<Value> prepareExpressionIfPossible(Expr expr) {
-        Op transfOp = SUPPRESS_PREPARED_EXPRESSIONS ? null : prepareExpr(expr);
+    private Producer<Value> prepareExpressionIfPossible(Expr expr, Variable... vars) {
+        Op transfOp = SUPPRESS_PREPARED_EXPRESSIONS ? null : prepareExpr(expr, vars);
         Producer<Value> valueProducer;
         if (transfOp != null) {
             if (transfOp.getReturnType() == Op.ReturnType.INT) {
@@ -408,7 +408,7 @@ public class EvaluatorImpl {
         symtab.put(prevVar);
         symtab.put(currVar);
         try {
-            Producer<Value> valueProducer = prepareExpressionIfPossible(transformation);
+            Producer<Value> valueProducer = prepareExpressionIfPossible(transformation, prevVar, currVar);
             //Producer<Value> valueProducer = valueProducer = () -> evaluate(transformation);
             for (idx[0] = 0; idx[0] < size; idx[0]++) {
                 if (idx[0]%100==0 && Thread.currentThread().isInterrupted()) {
@@ -765,23 +765,30 @@ public class EvaluatorImpl {
 
     /**
      * Creates a tree of operations (Op descendants);
-     * ops work much faster than traversing AST
+     * ops work much faster than traversing AST.
+     *
+     * Now it's used int map and reduce only, all variables except those declared in lambda
+     * are replaced with their values as consts
+     *
      * @param expr
+     * @param nonFinalVars variables that are not final.
+     * All variables that are not in the list will be replaced by their values
+     * at the moment of prepareExpr call
      * @return
      */
-    private Op prepareExpr(Expr expr) {
+    private Op prepareExpr(Expr expr, Variable... nonFinalVars) {
         if (expr == null) {
             return null;
         }
         ASTNode.NodeKind nodeKind = expr.getNodeKind();
         switch (nodeKind) {
             case PAREN:
-                return prepareExpr(((ParenExpr) expr).getFirstChild());
+                return prepareExpr(((ParenExpr) expr).getFirstChild(), nonFinalVars);
             case OP:
                 BinaryOpExpr opExpr = (BinaryOpExpr) expr;
                 final BinaryOpExpr.OpKind opKind = opExpr.getOpKind();
-                final Op left = prepareExpr(opExpr.getLeft());
-                final Op right = prepareExpr(opExpr.getRight());
+                final Op left = prepareExpr(opExpr.getLeft(), nonFinalVars);
+                final Op right = prepareExpr(opExpr.getRight(), nonFinalVars);
                 if (left == null || right == null) {
                     return null;
                 }
@@ -854,18 +861,45 @@ public class EvaluatorImpl {
             case ID:
                 IdExpr idExpr = (IdExpr) expr;
                 CharSequence name = idExpr.getName();
-                Variable var = symtab.get(name);
-                if (var == null) {
-                    return null;
+                Variable var = null;
+                // For final variables create a constant node,
+                // for non final variables - VarI or VarF node
+                boolean isConst = true;
+                for (Variable v : nonFinalVars) {
+                    if (contentEquals(name, v.getName())) {
+                        var = v;
+                        isConst = false;
+                        break;
+                    }
                 }
-                Value value = var.getValue();
-                Type type = (value != null) ? value.getType() : idExpr.getType();
-                if (type == Type.INT) {
-                    return new VarI(var);
-                } else if (type == Type.FLOAT) {
-                    return new VarF(var);
+                if (isConst) {
+                    assert var == null; // take from symtab
+                    var = symtab.get(name);
+                    if (var == null) {
+                        return null; // should have been already reported by parser
+                    }
+                    Value value = var.getValue();
+                    if (value == null) {
+                        error(var.getDeclaration(), "variable " + var.getValue() + " has null value");
+                        return null;
+                    } else if (value.getType() == Type.INT) {
+                        return new ConstI(value.getInt());
+                    } else if (value.getType() == Type.FLOAT) {
+                        return new ConstF(value.getFloat());
+                    } else {
+                        return null;
+                    }
                 } else {
-                    return null;
+                    assert var != null; // passed as parameter
+                    Value value = var.getValue();
+                    Type type = (value != null) ? value.getType() : idExpr.getType();
+                    if (type == Type.INT) {
+                        return new VarI(var);
+                    } else if (type == Type.FLOAT) {
+                        return new VarF(var);
+                    } else {
+                        return null;
+                    }
                 }
             case INT:
                 return new ConstI(((IntLiteral) expr).getValue());
@@ -881,6 +915,23 @@ public class EvaluatorImpl {
             default:
                 return null;
         }
+    }
+
+    private static boolean contentEquals(CharSequence cs1, CharSequence cs2) {
+        if (cs1 instanceof String) {
+            return ((String) cs1).contentEquals(cs2);
+        }
+        int len = cs1.length();
+        // cs1 is a generic CharSequence
+        if (len != cs2.length()) {
+            return false;
+        }
+        for (int i = 0; i < len; i++) {
+            if (cs1.charAt(i) != cs2.charAt(i)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
