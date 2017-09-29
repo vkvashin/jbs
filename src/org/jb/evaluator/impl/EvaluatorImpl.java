@@ -1,8 +1,19 @@
 package org.jb.evaluator.impl;
 
 import java.io.IOException;
+import java.util.Deque;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jb.ast.api.ASTNode;
@@ -28,7 +39,8 @@ public class EvaluatorImpl {
     // But right now it will only slow things down.
     private Thread execurorThread;
     
-    private Symtab symtab;
+    private final Symtab globalSymtab;
+    private final ThreadLocal<Deque<Symtab>> lambdaSymtabs = new ThreadLocal<>();
     
     private static final boolean TRACE = Boolean.getBoolean("jbs.trace");
     private static final boolean SUPPRESS_PREPARED_EXPRESSIONS = Boolean.getBoolean("jbs.suppress.prepare.expressions");
@@ -37,10 +49,16 @@ public class EvaluatorImpl {
     /** There are some errors that should be already reported by parser; the question is whether to report them  */
     private static final boolean REPORT_PARSER_ERRORS = false;
 
+    private final int minParallelizationCount = Integer.getInteger("jbs.par.count", 100000);
+    private final ThreadPoolExecutor executor;
+    private final int threadCount;
+
     public EvaluatorImpl(Appendable out, DiagnosticListener... diagnosticListeners) {
         this.out = out;
         this.diagnosticListeners = diagnosticListeners;
-        symtab = new Symtab(null, false);
+        globalSymtab = new Symtab();
+        threadCount = Integer.getInteger("jbs.threads", Runtime.getRuntime().availableProcessors() - 1);
+        executor = new ThreadPoolExecutor(threadCount, threadCount, 30, TimeUnit.SECONDS, new ArrayBlockingQueue(threadCount));
     }
 
     public void execute(ASTNode ast) {
@@ -79,11 +97,11 @@ public class EvaluatorImpl {
     }
 
     private void executeDecl(DeclStatement stmt) {
-        if (REPORT_PARSER_ERRORS && symtab.contains(stmt)) {
+        if (REPORT_PARSER_ERRORS && getSymtab().contains(stmt)) {
             error(stmt, "duplicate variable declaration " + stmt.getDelarationName());
         }
         Variable var = new Variable(stmt);
-        symtab.put(var);
+        getSymtab().put(var);
     }
 
     private void executePrint(PrintStatement stmt) {
@@ -168,7 +186,7 @@ public class EvaluatorImpl {
                 return Value.create(((FloatLiteral) expr).getValue());
             case ID:
                 IdExpr id = (IdExpr) expr;
-                Variable var = symtab.get(id.getName());
+                Variable var = getSymtab().get(id.getName());
                 if (var != null) {
                     return var.getValue();
                 } else {                    
@@ -223,6 +241,33 @@ public class EvaluatorImpl {
 
     private Value evaluateMap(Object array, DeclStatement varDecl, Expr transformation) {
         assert (array instanceof int[] || array instanceof double[]);
+        final int size = (array instanceof int[]) ? ((int[]) array).length : ((double[]) array).length;
+        int numThreads = (size >= minParallelizationCount) ? this.threadCount : 1;
+        final boolean isFloat = (array instanceof double[] ) || transformation.getType() == Type.FLOAT;
+        Object out = isFloat ? new double[size] : new int[size];
+        if (numThreads == 1) {
+            if (!evaluateMapImpl(array, out, 0, size, varDecl, transformation)) {
+                return Value.ERROR;
+            }
+        } else {
+            Future<Boolean>[] tasks = new Future[numThreads];
+            final int sliceSize = size / numThreads;
+            for (int slice = 0; slice < numThreads; slice++) {
+                int from = sliceSize*slice;
+                int to = (slice == numThreads-1) ? size : from + sliceSize;
+                tasks[slice] = executor.submit(() ->
+                        evaluateMapImpl(array, out, from, to, varDecl, transformation));
+            }
+            if (!waitTasks(tasks, null, (Boolean ok) -> ok != null && ok.booleanValue())) {
+                return Value.ERROR;
+            }
+        }
+        return (out instanceof int[]) ? Value.create((int[])out) : Value.create((double[]) out);
+    }
+
+    private Boolean evaluateMapImpl(Object array, Object out, final int from, final int to, DeclStatement varDecl, Expr transformation) {
+        assert (array instanceof int[] || array instanceof double[]);
+        assert (out instanceof int[] || out instanceof double[]);
         // input arrays and its size
         // NB: as to input arrays, we always ise intIn if (array instanceof int[]), otherwise float.
         int[] intIn;
@@ -237,67 +282,63 @@ public class EvaluatorImpl {
             size = floatIn.length;
             intIn = null;
         }
-        // With input arrays we sometimes have to switch to double[] and vice versa.
-        // So we always initially try using int[] and switch to double[] as soon as we get float result
-        int[] intOut = new int[size];
-        double[] floatOut = null;   
-        // smart variable:
-        int[] idx = new int[1]; // to be able to use mutable index in anonimous class
-        Value smartValue = new Value() {
-            @Override
-            public Type getType() {
-                return (intIn != null) ? Type.INT : Type.FLOAT;
-            }
-            @Override
-            public int getInt() {
-                return intIn[idx[0]];
-            }
-            @Override
-            public double getFloat() {
-                return floatIn[idx[0]];
-            }
-        };
-        Variable smartVar = new Variable(varDecl) {
-            @Override
-            public Value getValue() {
-                return smartValue;
-            }
-        };
-        pushSymtab(false);
-        symtab.put(smartVar);
+        final int[] intOut = (out instanceof int[]) ? (int[]) out : null;
+        final double[] floatOut = (out instanceof double[]) ? (double[]) out : null;
         try {
-            Producer<Value> valueProducer = prepareExpressionIfPossible(transformation, smartVar);
-            for (idx[0] = 0; idx[0] < size; idx[0]++) {
+            // smart variable:
+            int[] idx = new int[1]; // to be able to use mutable index in anonimous class
+            Value smartValue = new Value() {
+                @Override
+                public Type getType() {
+                    return (intIn != null) ? Type.INT : Type.FLOAT;
+                }
+                @Override
+                public int getInt() {
+                    return intIn[idx[0]];
+                }
+                @Override
+                public double getFloat() {
+                    return floatIn[idx[0]];
+                }
+            };
+            Variable smartVar = new Variable(varDecl) {
+                @Override
+                public Value getValue() {
+                    return smartValue;
+                }
+            };
+            pushSymtab();
+            getSymtab().put(smartVar);
+            AtomicBoolean prepared = new AtomicBoolean(false);
+            Producer<Value> valueProducer = prepareExpressionIfPossible(transformation, prepared, smartVar);
+            for (idx[0] = from; idx[0] < to; idx[0]++) {
                 if (idx[0]%100==0 && Thread.currentThread().isInterrupted()) {
-                    return Value.ERROR;
+                    return false;
                 }
                 Value v = valueProducer.produce();
                 Type type = v.getType();
                 switch (type) {                    
                     case INT:
-                        intOut[idx[0]] = v.getInt();
+                        if (intOut != null) {
+                            intOut[idx[0]] = v.getInt();
+                        } else {
+                            floatOut[idx[0]] = v.getInt();
+                        }
                         break;
                     case FLOAT:
-                        if (floatOut == null) {
-                            floatOut = new double[intOut.length];
-                            for (int i = 0; i < idx[0]; i++) {
-                                floatOut[i] = (double) intOut[i];
-                            }
-                            intOut = null; 
-                        }
                         floatOut[idx[0]] = v.getFloat();
                         break;
                     case ERRONEOUS:
-                        return Value.ERROR;
+                        return false;
                     case SEQ_INT:
                     case SEQ_FLOAT:
                     case STRING:
                     default:
                         error(transformation, "unexpected type: " + type);
-                        return Value.ERROR;
+                        return false;
                 }
             }
-            return (floatOut == null) ? Value.create(intOut) : Value.create(floatOut);
+            return true;
         } finally {
             popSymtab();
         }
@@ -335,10 +376,11 @@ public class EvaluatorImpl {
         }
         return Value.ERROR;        
     }
-    private Producer<Value> prepareExpressionIfPossible(Expr expr, Variable... vars) {
+    private Producer<Value> prepareExpressionIfPossible(Expr expr, AtomicBoolean prepared, Variable... vars) {
         Op transfOp = SUPPRESS_PREPARED_EXPRESSIONS ? null : prepareExpr(expr, vars);
         Producer<Value> valueProducer;
         if (transfOp != null) {
+            prepared.set(true);
             if (transfOp.getReturnType() == Op.ReturnType.INT) {
                 OpI transfOpI = (OpI) transfOp;
                 valueProducer = () -> Value.create(transfOpI.eval());
@@ -347,6 +389,7 @@ public class EvaluatorImpl {
                 valueProducer = () -> Value.create(transfOpF.eval());
             }
         } else {
+            prepared.set(false);
             valueProducer = () -> evaluate(expr);
         }
         return valueProducer;
@@ -404,11 +447,12 @@ public class EvaluatorImpl {
                 return smartValue;
             }
         };
-        pushSymtab(false);
-        symtab.put(prevVar);
-        symtab.put(currVar);
+        pushSymtab();
+        getSymtab().put(prevVar);
+        getSymtab().put(currVar);
         try {
-            Producer<Value> valueProducer = prepareExpressionIfPossible(transformation, prevVar, currVar);
+            AtomicBoolean prepared = new AtomicBoolean(false);
+            Producer<Value> valueProducer = prepareExpressionIfPossible(transformation, prepared, prevVar, currVar);
             //Producer<Value> valueProducer = valueProducer = () -> evaluate(transformation);
             for (idx[0] = 0; idx[0] < size; idx[0]++) {
                 if (idx[0]%100==0 && Thread.currentThread().isInterrupted()) {
@@ -424,6 +468,40 @@ public class EvaluatorImpl {
         } finally {
             popSymtab();
         }
+    }
+
+    /**
+     * Wait all tasks in the array;
+     * if output parameter out is specified, fills it with tasks return values;
+     * whether the task succeeds is determined by testSuccess predicate.
+     * @return true if all tasks succeeded
+     */
+    private <T> boolean waitTasks(Future<T>[] tasks, T[] out, Predicate<T> testSuccess) {
+        boolean failed = false;
+        try {
+            for (int i = 0; i < tasks.length; i++) {
+                T value = tasks[i].get();
+                if (testSuccess.test(value)) {
+                    if(out != null) {
+                        out[i] = value;
+                    }
+                } else {
+                    failed = true;
+                }
+            }
+        } catch (InterruptedException ex) {
+            failed = true;
+        } catch (ExecutionException ex) {
+            failed = true;
+            error(ex.getLocalizedMessage());
+            ex.printStackTrace();
+        }
+        if (failed) {
+            for (Future<T> task : tasks) {
+                task.cancel(true);
+            }
+        }
+        return !failed;
     }
 
     private Value evaluateSequence(SeqExpr expr) {
@@ -571,53 +649,54 @@ public class EvaluatorImpl {
         }
     }
     
-    private void pushSymtab(boolean transitive) {
-        symtab =  new Symtab(symtab, transitive);
+    private void pushSymtab() {
+        Symtab s =  new Symtab();
+        Deque<Symtab> deque = lambdaSymtabs.get();
+        if (deque == null) {
+            deque = new LinkedList<>();
+            lambdaSymtabs.set(deque);
+        }
+        deque.push(new Symtab());
     }
     
     private void popSymtab() {
-        assert symtab.previous != null;
-        symtab = symtab.previous;
+        Deque<Symtab> deque = lambdaSymtabs.get();
+        assert deque != null;
+        deque.pop();
     }
 
-    private class Symtab {
-
-        private boolean transitive;
-        private Symtab previous;
-        private Map<CharSequence, Variable> data = new TreeMap<>();        
-
-        public Symtab(Symtab previous, boolean transitive) {
-            this.transitive = transitive;
-            this.previous = previous;
+    private Symtab getSymtab() {
+        Deque<Symtab> deque = lambdaSymtabs.get();
+        if (deque != null) {
+            Symtab s = deque.peek();
+            if (s != null) {
+                return s;
+            }
         }
+        return globalSymtab;
+    }
+
+    private class Symtab  {
+
+        private ConcurrentHashMap<CharSequence, Variable> data = new ConcurrentHashMap<>();
 
         public boolean contains(DeclStatement stmt) {
             return contains(stmt.getDelarationName());
         }
 
         public boolean contains(CharSequence name) {
-            if (data.containsKey(name)) {
-                return true;
-            }
-            if (transitive && previous != null) {
-                return previous.contains(name);
-            }
-            return false;
+            return data.containsKey(name);
         }
         
         public Variable get(CharSequence name) {
-            Variable var = data.get(name);
-            if (var == null && transitive && previous != null) {
-                var = previous.get(name);
-            }
-            return var;
+            return data.get(name);
         }
 
         public void put(Variable var) {
             data.put(var.getName(), var);
         }
     }
-
+    
     /**
      * From performance perspective, it's questional whether its worth to have this class.
      * But from the code readability and reliability we'd better use it than bare Object.
@@ -874,7 +953,7 @@ public class EvaluatorImpl {
                 }
                 if (isConst) {
                     assert var == null; // take from symtab
-                    var = symtab.get(name);
+                    var = getSymtab().get(name);
                     if (var == null) {
                         return null; // should have been already reported by parser
                     }

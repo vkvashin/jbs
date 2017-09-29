@@ -36,7 +36,7 @@ public class EvaluatorMapTest extends EvaluatorTestBase {
             "var z = map(y, i -> 1)\n" + 
             "out z\n";
         //setDebug(true);
-        doTestEvaluator(source, "1, 1, 1");
+        doTestEvaluator(source, "1.0, 1.0, 1.0");
     }
     
     @Test
@@ -48,6 +48,16 @@ public class EvaluatorMapTest extends EvaluatorTestBase {
             "out z\n";
         //setDebug(true);
         doTestEvaluator(source, "6.2, 8.2, 10.2");
+    }
+
+    @Test
+    public void testSimpleMapIntFloat2() throws Exception {
+        String source =
+            "var x = {1, 3}\n" +
+            "var y = map(x, i -> reduce({1,2}, 0, x y -> x+0.1))\n" +
+            "out y\n";
+        //setDebug(true);
+        doTestEvaluator(source, "0.2, 0.2, 0.2");
     }
 
     @Test
