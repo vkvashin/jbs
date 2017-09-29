@@ -189,5 +189,42 @@ public class EvaluatorSimpleTest extends EvaluatorTestBase {
         setDebug(true);
         doTestEvaluator(source, null);
         assertEmptyDiagnostics();
-    }    
+    }
+
+    @Test
+    public void testLambdaEvaluatorNoCaptureMap() throws Exception {
+        // just make sure that in "proceed on errors mode" it won't throw an NPE or so
+        String source
+                = "var n = 500\n"
+                + "var sequence = map({0, n}, i -> i*n)\n"
+                + "out sequence\n";
+        //setDebug(true);
+        doTestEvaluator(source, null);
+        assertNonEmptyDiagnostics();
+    }
+
+    @Test
+    public void testLambdaEvaluatorNoCaptureReduce() throws Exception {
+        // just make sure that in "proceed on errors mode" it won't throw an NPE or so
+        String source
+                = "var a = 1\n"
+                + "var x = {1, 3}\n"
+                + "var c = reduce(x, 0, x y -> x+y+a)\n"
+                + "out c";
+        //setDebug(true);
+        doTestAST(source, null);
+        assertNonEmptyDiagnostics();
+    }
+
+    @Test
+    public void testEvaluatorUndeclaredVar() throws Exception {
+        // just make sure that in "proceed on errors mode" it won't throw an NPE or so
+        String source
+                = "var a = 1\n"
+                + "var x = a + b\n"
+                + "out x";
+        //setDebug(true);
+        doTestAST(source, null);
+        assertNonEmptyDiagnostics();
+    }
 }

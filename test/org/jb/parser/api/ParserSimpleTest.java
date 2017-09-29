@@ -386,4 +386,25 @@ public class ParserSimpleTest extends ParserTestBase {
         });
         assertEmptyDiagnostics();
     }
+
+    @Test
+    public void testLambdaParserNoCaptureReduce() throws Exception {
+        String source =
+            "var a = 1\n" +
+            "var x = {1, 3}\n" +
+            "var c = reduce(x, 0, x y -> x+y+a)\n";
+        //setDebug(true);
+        doTestAST(source, null);
+        assertDiagnosticEquals(0, 3, 33, "undeclared variable a");
+    }
+
+    @Test
+    public void testLambdaParserNoCaptureMap() throws Exception {
+        String source
+                = "var n = 500\n"
+                + "var sequence = map({0, n}, i -> i*n)\n";
+        //setDebug(true);
+        doTestAST(source, null);
+        assertDiagnosticEquals(0, 2, 35, "undeclared variable n");
+    }
 }

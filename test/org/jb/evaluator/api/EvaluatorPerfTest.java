@@ -24,7 +24,7 @@ public class EvaluatorPerfTest extends EvaluatorTestBase {
         //setDebug(true);
         
         long time1 = System.currentTimeMillis();
-        String[] out = doTestEvaluator(source, null);        
+        String[] out = doTestEvaluator(source, "3.1415926*");
         time1 = System.currentTimeMillis() - time1;
         
         long time2 = System.currentTimeMillis();
