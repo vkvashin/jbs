@@ -14,6 +14,7 @@ public class EvaluatorTestBase extends ParserTestBase {
         StringBuilder out = new StringBuilder();
         Evaluator evaluator = new Evaluator(out, getTestDiagnosticListener());
         evaluator.execute(ast);
+        evaluator.dispose();
         if (isDebug()) {
             System.out.println("\nEvaluator output");
             System.out.flush();

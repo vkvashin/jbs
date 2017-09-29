@@ -20,4 +20,8 @@ public final class Evaluator {
     public void execute(ASTNode ast) {
         runnerImpl.execute(ast);
     }
+
+    public void dispose() {
+        runnerImpl.dispose();
+    }
 }

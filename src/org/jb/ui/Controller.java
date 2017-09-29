@@ -174,6 +174,7 @@ import org.jb.parser.api.Parser;
             Evaluator evaluator = new Evaluator(
                     outputWindow.getOutputAsAppendable(), outputWindow.getDiagnosticListener());
             evaluator.execute(ast);
+            evaluator.dispose();
         } catch (UnsupportedEncodingException | TokenStreamException ex) {
             outputWindow.printErr(ex.getLocalizedMessage());
         } catch (OutOfMemoryError ex) {
@@ -209,6 +210,7 @@ import org.jb.parser.api.Parser;
                     Evaluator evaluator = new Evaluator(
                             outputWindow.getOutputAsAppendable(), listeners);
                     evaluator.execute(ast);
+                    evaluator.dispose();
                 } catch (OutOfMemoryError ex) {
                     outputWindow.printErr("Insufficient memory to complete the operation");
                 } catch (Throwable ex) {

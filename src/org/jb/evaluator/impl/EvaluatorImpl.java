@@ -58,7 +58,11 @@ public class EvaluatorImpl {
         this.diagnosticListeners = diagnosticListeners;
         globalSymtab = new Symtab();
         threadCount = Integer.getInteger("jbs.threads", Runtime.getRuntime().availableProcessors() - 1);
-        executor = new ThreadPoolExecutor(threadCount, threadCount, 30, TimeUnit.SECONDS, new ArrayBlockingQueue(threadCount));
+        executor = new ThreadPoolExecutor(threadCount, threadCount, 2, TimeUnit.SECONDS, new ArrayBlockingQueue(threadCount));
+    }
+
+    public void dispose() {
+        executor.shutdown();
     }
 
     public void execute(ASTNode ast) {
@@ -242,21 +246,23 @@ public class EvaluatorImpl {
     private Value evaluateMap(Object array, DeclStatement varDecl, Expr transformation) {
         assert (array instanceof int[] || array instanceof double[]);
         final int size = (array instanceof int[]) ? ((int[]) array).length : ((double[]) array).length;
-        int numThreads = (size >= minParallelizationCount) ? this.threadCount : 1;
+        // we check executor.getActiveCount() tp prevent further parallelization within already parallelized processing
+        int numThreads = (size >= minParallelizationCount && executor.getActiveCount() == 0) ? this.threadCount : 1;
         final boolean isFloat = (array instanceof double[] ) || transformation.getType() == Type.FLOAT;
         Object out = isFloat ? new double[size] : new int[size];
         if (numThreads == 1) {
-            if (!evaluateMapImpl(array, out, 0, size, varDecl, transformation)) {
+            if (!evaluateMapImpl(array, out, 0, size, 1, varDecl, transformation)) {
                 return Value.ERROR;
             }
         } else {
             Future<Boolean>[] tasks = new Future[numThreads];
             final int sliceSize = size / numThreads;
             for (int slice = 0; slice < numThreads; slice++) {
-                int from = sliceSize*slice;
-                int to = (slice == numThreads-1) ? size : from + sliceSize;
+                //int from = sliceSize*slice;
+                //int to = (slice == numThreads-1) ? size : from + sliceSize;
+                int finalSlice = slice;
                 tasks[slice] = executor.submit(() ->
-                        evaluateMapImpl(array, out, from, to, varDecl, transformation));
+                        evaluateMapImpl(array, out, 0+finalSlice, size, numThreads, varDecl, transformation));
             }
             if (!waitTasks(tasks, null, (Boolean ok) -> ok != null && ok.booleanValue())) {
                 return Value.ERROR;
@@ -265,7 +271,7 @@ public class EvaluatorImpl {
         return (out instanceof int[]) ? Value.create((int[])out) : Value.create((double[]) out);
     }
 
-    private Boolean evaluateMapImpl(Object array, Object out, final int from, final int to, DeclStatement varDecl, Expr transformation) {
+    private Boolean evaluateMapImpl(Object array, Object out, final int from, final int to, final int inc, DeclStatement varDecl, Expr transformation) {
         assert (array instanceof int[] || array instanceof double[]);
         assert (out instanceof int[] || out instanceof double[]);
         // input arrays and its size
@@ -309,9 +315,8 @@ public class EvaluatorImpl {
             };
             pushSymtab();
             getSymtab().put(smartVar);
-            AtomicBoolean prepared = new AtomicBoolean(false);
-            Producer<Value> valueProducer = prepareExpressionIfPossible(transformation, prepared, smartVar);
-            for (idx[0] = from; idx[0] < to; idx[0]++) {
+            Producer<Value> valueProducer = prepareExpressionIfPossible(transformation, smartVar);
+            for (idx[0] = from; idx[0] < to; idx[0]+=inc) {
                 if (idx[0]%100==0 && Thread.currentThread().isInterrupted()) {
                     return false;
                 }
@@ -376,11 +381,10 @@ public class EvaluatorImpl {
         }
         return Value.ERROR;        
     }
-    private Producer<Value> prepareExpressionIfPossible(Expr expr, AtomicBoolean prepared, Variable... vars) {
+    private Producer<Value> prepareExpressionIfPossible(Expr expr, Variable... vars) {
         Op transfOp = SUPPRESS_PREPARED_EXPRESSIONS ? null : prepareExpr(expr, vars);
         Producer<Value> valueProducer;
         if (transfOp != null) {
-            prepared.set(true);
             if (transfOp.getReturnType() == Op.ReturnType.INT) {
                 OpI transfOpI = (OpI) transfOp;
                 valueProducer = () -> Value.create(transfOpI.eval());
@@ -389,27 +393,71 @@ public class EvaluatorImpl {
                 valueProducer = () -> Value.create(transfOpF.eval());
             }
         } else {
-            prepared.set(false);
             valueProducer = () -> evaluate(expr);
         }
         return valueProducer;
     }
 
+    private boolean isAssociative(Expr expr) {
+        //throw new UnsupportedOperationException("isAssociative not yet implemented");
+        return true;
+    }
+
     private Value evaluateReduce(Object array, Value defValue, DeclStatement prevDecl, DeclStatement currDecl, Expr transformation) {
+        assert (array instanceof int[] || array instanceof double[]);
+        final int size = (array instanceof int[]) ? ((int[]) array).length : ((double[]) array).length;
+        // we check executor.getActiveCount() tp prevent further parallelization within already parallelized processing
+        int numThreads = (size >= minParallelizationCount && isAssociative(transformation) && executor.getActiveCount() == 0) ? this.threadCount : 1;
+        if (numThreads == 1) {
+            return evaluateReduceImpl(array, 0, size, 1, defValue, prevDecl, currDecl, transformation);
+        } else {
+            Future<Value>[] tasks = new Future[numThreads];
+            final int sliceSize = size / numThreads;
+            for (int slice = 0; slice < numThreads; slice++) {
+                //int from = sliceSize*slice;
+                //int to = (slice == numThreads-1) ? size : from + sliceSize;
+                int finalSlice = slice;
+                tasks[slice] = executor.submit(() ->
+                        evaluateReduceImpl(array, 0+finalSlice, size, numThreads, defValue, prevDecl, currDecl, transformation));
+            }
+            Value[] out = new Value[numThreads];
+            if (waitTasks(tasks, out, (Value v) -> v != null && v.getType() != Type.ERRONEOUS)) {
+                Object arr;
+                if (out[0].getType() == Type.INT) {
+                    int[] t = new int[out.length];
+                    for (int i = 0; i < t.length; i++) {
+                        t[i] = out[i].getInt();
+                    }
+                    arr = t;
+                } else if (out[0].getType() == Type.FLOAT) {
+                    double[] t = new double[out.length];
+                    for (int i = 0; i < t.length; i++) {
+                        t[i] = out[i].getFloat();
+                    }
+                    arr = t;
+                } else {
+                    return Value.ERROR;
+                }
+                return evaluateReduceImpl(arr, 1, out.length, 1, out[0], prevDecl, currDecl, transformation);
+
+            } else {
+                return Value.ERROR;
+            }
+        }
+    }
+
+    private Value evaluateReduceImpl(Object array, final int from, final int to, final int inc, Value defValue, DeclStatement prevDecl, DeclStatement currDecl, Expr transformation) {
         assert isArithmetic(defValue);
         // input arrays and its size
         assert (array instanceof int[] || array instanceof double[]);
         // NB: as to input arrays, we always ise intIn if (array instanceof int[]), otherwise float.
         int[] intIn;
         double[] floatIn;
-        final int size;
         if (array instanceof int[]) {
             intIn = (int[]) array;
-            size = intIn.length;
             floatIn = null;
         } else {
             floatIn = (double[]) array;
-            size = floatIn.length;
             intIn = null;
         }
         if (defValue.getType() == Type.INT) {
@@ -451,10 +499,8 @@ public class EvaluatorImpl {
         getSymtab().put(prevVar);
         getSymtab().put(currVar);
         try {
-            AtomicBoolean prepared = new AtomicBoolean(false);
-            Producer<Value> valueProducer = prepareExpressionIfPossible(transformation, prepared, prevVar, currVar);
-            //Producer<Value> valueProducer = valueProducer = () -> evaluate(transformation);
-            for (idx[0] = 0; idx[0] < size; idx[0]++) {
+            Producer<Value> valueProducer = prepareExpressionIfPossible(transformation, prevVar, currVar);
+            for (idx[0] = from; idx[0] < to; idx[0]+=inc) {
                 if (idx[0]%100==0 && Thread.currentThread().isInterrupted()) {
                     return Value.ERROR;
                 }         
