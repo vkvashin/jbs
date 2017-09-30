@@ -2,13 +2,23 @@ package org.jb.ui;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -35,6 +45,7 @@ import org.jb.parser.api.Parser;
     
     private volatile EditorWindow editorWindow;
     private volatile OutputWindow outputWindow;
+    private volatile MainWindow mainWindow;
 
     // When autorun is OFF, calculations are launched explicitly.
     // In this mode, if a calculation takes long, user can edit text,
@@ -55,6 +66,9 @@ import org.jb.parser.api.Parser;
     private volatile boolean autorun = true;
     private volatile boolean proceedOnError = false;
     private volatile boolean allowParallelisation = true;
+
+    private File lastDirectory = null;
+    private File currentFile = null;
 
     /**
      * Incremented each time we schedule a syntax check.
@@ -86,11 +100,12 @@ import org.jb.parser.api.Parser;
         });
     }
 
-    public void init(EditorWindow editorWindow, OutputWindow outputWindow) {
+    public void init(EditorWindow editorWindow, OutputWindow outputWindow, MainWindow mainWindow) {
         assert this.editorWindow == null;
         assert this.outputWindow == null;
         this.editorWindow = editorWindow;
         this.outputWindow = outputWindow;
+        this.mainWindow = mainWindow;
         docUpdateTimer.setRepeats(false);
         editorWindow.addDocumentListener(new DocumentListener() {
             @Override
@@ -362,6 +377,63 @@ import org.jb.parser.api.Parser;
     public void toggleParallelisation() {
         allowParallelisation = ! allowParallelisation;
     }
+
+    public void open() {
+        assert SwingUtilities.isEventDispatchThread();
+        JFileChooser fileChooser = new JFileChooser(lastDirectory);
+        int res = fileChooser.showOpenDialog(mainWindow);
+        if (res == JFileChooser.APPROVE_OPTION) {
+            File file = fileChooser.getSelectedFile();
+            lastDirectory = file.getParentFile();
+            if (file.exists()) {
+                try {
+                    // TODO: move file operations out from EDT!
+                    String newText = new String(Files.readAllBytes(Paths.get(file.toURI())));
+                    editorWindow.setText(newText);
+                    currentFile = file;
+                    mainWindow.fileChanged(currentFile);
+                } catch (IOException ex) {
+                    JOptionPane.showMessageDialog(mainWindow, "Error opening file: " + ex.getLocalizedMessage());
+                }
+            }
+        }
+    }
+
+    public void save() {
+        assert SwingUtilities.isEventDispatchThread();
+        if (currentFile == null) {
+            saveAs();
+            return;
+        }
+        saveImpl(currentFile); // TODO: move file operations out from EDT!
+    }
+
+    public void saveAs() {
+        assert SwingUtilities.isEventDispatchThread();
+        JFileChooser fileChooser = new JFileChooser(lastDirectory);
+        int res = fileChooser.showSaveDialog(mainWindow);
+        if (res == JFileChooser.APPROVE_OPTION) {
+            File file = fileChooser.getSelectedFile();
+            lastDirectory = file.getParentFile();
+            if (saveImpl(file)) {
+                currentFile = file;
+                mainWindow.fileChanged(currentFile);
+            }
+        }
+    }
+
+    private boolean saveImpl(File file) {
+        final String text = editorWindow.getText();
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+            // TODO: move file operations out from EDT!
+            writer.write(text);
+            return true;
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(mainWindow, "Error saving file: " + ex.getLocalizedMessage());
+            return false;
+        }
+    }
+
     private static void debugSleep() {
         try { Thread.sleep(10000); } catch (InterruptedException ex) {}
     }

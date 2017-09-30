@@ -1,9 +1,8 @@
 package org.jb.ui;
 
 import java.awt.*;
-import java.awt.event.*;
+import java.io.File;
 import javax.swing.*;
-import java.io.*;
 
 /**
  *
@@ -16,24 +15,34 @@ import java.io.*;
     private final OutputWindow outputWindow;
     private final JMenuBar mainMenu;
 
+    private static final String TITLE = "JbScript console";
+
     public MainWindow() {
-        super("JbScript console");
+        super(TITLE);
         this.editorWindow = new EditorWindow();
         this.outputWindow = new OutputWindow();
-        Controller.getInstance().init(editorWindow, outputWindow);
+        mainMenu = initMenu();
         this.splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+    }
+
+    public void fileChanged(File file) {
+        setTitle(TITLE + " [" + file.getName() + ']');
+    }
+
+    public void initComponents() {
+        Controller.getInstance().init(editorWindow, outputWindow, this);
         splitPane.setLeftComponent(editorWindow);
-        splitPane.setRightComponent(outputWindow);        
+        splitPane.setRightComponent(outputWindow);
         //splitPane.setDividerLocation(0.66);
         getContentPane().add(splitPane, BorderLayout.CENTER);
-        mainMenu = initMenu();
         setJMenuBar(mainMenu);
         addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
             public void windowClosing(java.awt.event.WindowEvent evt) {
                 Controller.getInstance().exit();
             }
         });
-        adjustSizeAndPosition();        
+        adjustSizeAndPosition();
     }
     
     private void adjustSizeAndPosition() {
@@ -50,6 +59,24 @@ import java.io.*;
 
         JMenu fileMenu = new JMenu("File");
         fileMenu.setMnemonic('F');
+
+        {
+            JMenuItem openItem = new JMenuItem(Actions.OPEN);
+            openItem.setMnemonic(Actions.OPEN.getMnemonic());
+            fileMenu.add(openItem);
+        }
+
+        {
+            JMenuItem saveItem = new JMenuItem(Actions.SAVE);
+            saveItem.setMnemonic(Actions.SAVE.getMnemonic());
+            fileMenu.add(saveItem);
+        }
+
+        {
+            JMenuItem saveAsItem = new JMenuItem(Actions.SAVE_AS);
+            saveAsItem.setMnemonic(Actions.SAVE_AS.getMnemonic());
+            fileMenu.add(saveAsItem);
+        }
 
         JMenuItem exitItem = new JMenuItem(Actions.EXIT);
         exitItem.setMnemonic(Actions.EXIT.getMnemonic());

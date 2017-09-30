@@ -1,8 +1,8 @@
 package org.jb.ui;
 
 import java.awt.event.*;
-import java.awt.*;
 import java.net.URL;
+import java.util.function.Predicate;
 import javax.swing.*;
 import static javax.swing.Action.SMALL_ICON;
 
@@ -11,14 +11,20 @@ import static javax.swing.Action.SMALL_ICON;
  * @author vkvashin
  */
 public class Actions {
-    
+
     /*package*/ static final ExitAction EXIT = new ExitAction();
+
     /*package*/ static final RunAction RUN = new RunAction();
     /*package*/ static final StopAction STOP = new StopAction();
     /*package*/ static final AstAction AST = new AstAction();
+    
     /*package*/ static final AutorunAction AUTORUN = new AutorunAction();
     /*package*/ static final ProceedOnError PROCEED_ON_ERROR = new ProceedOnError();
     /*package*/ static final AllowParallelisation ALLOW_PARALLELIZATION = new AllowParallelisation();
+
+    /*package*/ static final OpenAction OPEN = new OpenAction();
+    /*package*/ static final SaveAction SAVE = new SaveAction();
+    /*package*/ static final SaveAsAction SAVE_AS = new SaveAsAction();
 
     /*package*/ static class ExitAction extends AbstractAction {
         public ExitAction() {
@@ -33,7 +39,7 @@ public class Actions {
         }
     }
 
-    /*package*/ static class RunAction extends AbstractAction {
+    /*package*/ static final  class RunAction extends AbstractAction {
         public RunAction() {
             super("Run");
             putValue(SMALL_ICON, createIcon("/org/jb/ui/resources/run.png"));
@@ -47,7 +53,7 @@ public class Actions {
         }
     }
     
-    /*package*/ static class StopAction extends AbstractAction {
+    /*package*/ static final class StopAction extends AbstractAction {
         public StopAction() {
             super("Stop");
             putValue(SMALL_ICON, createIcon("/org/jb/ui/resources/stop.png"));
@@ -62,7 +68,7 @@ public class Actions {
         }
     }
     
-    /*package*/ static class AstAction extends AbstractAction {
+    /*package*/ static final class AstAction extends AbstractAction {
         public AstAction() {
             super("Show Ast");
             putValue(SMALL_ICON, createIcon("/org/jb/ui/resources/ast.gif"));
@@ -124,6 +130,46 @@ public class Actions {
         }
         public boolean isChecked() {
             return Controller.getInstance().isParallelisationAllowed();
+        }
+    }
+
+    /*package*/ static class OpenAction extends AbstractAction {
+        public OpenAction() {
+            super("Open");
+        }
+        public char getMnemonic() {
+            return 'o';
+        }
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            Controller.getInstance().open();
+        }
+    }
+
+    /*package*/ static class SaveAction extends AbstractAction {
+        public SaveAction() {
+            super("Save");
+        }
+        public char getMnemonic() {
+            return 's';
+        }
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            Controller.getInstance().save();
+        }
+    }
+
+
+    /*package*/ static class SaveAsAction extends AbstractAction {
+        public SaveAsAction() {
+            super("Save As");
+        }
+        public char getMnemonic() {
+            return 'a';
+        }
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            Controller.getInstance().saveAs();
         }
     }
 

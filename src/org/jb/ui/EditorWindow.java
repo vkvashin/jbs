@@ -49,6 +49,10 @@ import javax.swing.text.StyleConstants;
         return editorPane.getText();
     }
 
+    public void setText(String text) {
+        editorPane.setText(text);
+    }
+
     public void addDocumentListener(DocumentListener listener) {
         editorPane.getDocument().addDocumentListener(listener);
     }
