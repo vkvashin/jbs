@@ -13,8 +13,8 @@ public final class Evaluator {
     
     private final EvaluatorImpl runnerImpl;
 
-    public Evaluator(Appendable out, DiagnosticListener... diagnosticListeners) {
-        runnerImpl = new EvaluatorImpl(out, diagnosticListeners);
+    public Evaluator(Appendable out, boolean allowParallel, DiagnosticListener... diagnosticListeners) {
+        runnerImpl = new EvaluatorImpl(out, allowParallel, diagnosticListeners);
     }
     
     public void execute(ASTNode ast) {

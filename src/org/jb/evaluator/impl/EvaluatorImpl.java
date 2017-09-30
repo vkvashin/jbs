@@ -53,11 +53,11 @@ public class EvaluatorImpl {
     private final ThreadPoolExecutor executor;
     private final int threadCount;
 
-    public EvaluatorImpl(Appendable out, DiagnosticListener... diagnosticListeners) {
+    public EvaluatorImpl(Appendable out, boolean allowParallel, DiagnosticListener... diagnosticListeners) {
         this.out = out;
         this.diagnosticListeners = diagnosticListeners;
         globalSymtab = new Symtab();
-        threadCount = Integer.getInteger("jbs.threads", Runtime.getRuntime().availableProcessors() - 1);
+        threadCount = allowParallel ? Integer.getInteger("jbs.threads", Runtime.getRuntime().availableProcessors() - 1) : 1;
         executor = new ThreadPoolExecutor(threadCount, threadCount, 2, TimeUnit.SECONDS, new ArrayBlockingQueue(threadCount));
     }
 

@@ -18,6 +18,7 @@ public class Actions {
     /*package*/ static final AstAction AST = new AstAction();
     /*package*/ static final AutorunAction AUTORUN = new AutorunAction();
     /*package*/ static final ProceedOnError PROCEED_ON_ERROR = new ProceedOnError();
+    /*package*/ static final AllowParallelisation ALLOW_PARALLELIZATION = new AllowParallelisation();
 
     /*package*/ static class ExitAction extends AbstractAction {
         public ExitAction() {
@@ -99,7 +100,7 @@ public class Actions {
             super("Proceed on error");
         }
         public char getMnemonic() {
-            return 'P';
+            return 'e';
         }
         @Override
         public void actionPerformed(ActionEvent e) {
@@ -107,6 +108,22 @@ public class Actions {
         }
         public boolean isChecked() {
             return Controller.getInstance().isProceedOnError();
+        }
+    }
+
+    /*package*/ static class AllowParallelisation extends AbstractAction {
+        public AllowParallelisation() {
+            super("Allow Parallelisation");
+        }
+        public char getMnemonic() {
+            return 'p';
+        }
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            Controller.getInstance().toggleParallelisation();
+        }
+        public boolean isChecked() {
+            return Controller.getInstance().isParallelisationAllowed();
         }
     }
 

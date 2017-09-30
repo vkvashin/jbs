@@ -12,6 +12,7 @@ import java.util.concurrent.*;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.text.html.HTMLEditorKit;
 import org.jb.ast.api.ASTNode;
 import org.jb.ast.diagnostics.Diagnostic;
 import org.jb.ast.diagnostics.DiagnosticListener;
@@ -53,6 +54,7 @@ import org.jb.parser.api.Parser;
 
     private volatile boolean autorun = true;
     private volatile boolean proceedOnError = false;
+    private volatile boolean allowParallelisation = true;
 
     /**
      * Incremented each time we schedule a syntax check.
@@ -172,7 +174,7 @@ import org.jb.parser.api.Parser;
             Parser parser = new Parser();
             ASTNode ast = parser.parse(ts, outputWindow.getDiagnosticListener());
             Evaluator evaluator = new Evaluator(
-                    outputWindow.getOutputAsAppendable(), outputWindow.getDiagnosticListener());
+                    outputWindow.getOutputAsAppendable(), allowParallelisation, outputWindow.getDiagnosticListener());
             evaluator.execute(ast);
             evaluator.dispose();
         } catch (UnsupportedEncodingException | TokenStreamException ex) {
@@ -208,7 +210,7 @@ import org.jb.parser.api.Parser;
                 SwingUtilities.invokeLater(() -> Actions.STOP.setEnabled(true));
                 try {
                     Evaluator evaluator = new Evaluator(
-                            outputWindow.getOutputAsAppendable(), listeners);
+                            outputWindow.getOutputAsAppendable(), allowParallelisation, listeners);
                     evaluator.execute(ast);
                     evaluator.dispose();
                 } catch (OutOfMemoryError ex) {
@@ -353,6 +355,13 @@ import org.jb.parser.api.Parser;
         proceedOnError = ! proceedOnError;
     }
 
+    public boolean isParallelisationAllowed() {
+        return allowParallelisation;
+    }
+
+    public void toggleParallelisation() {
+        allowParallelisation = ! allowParallelisation;
+    }
     private static void debugSleep() {
         try { Thread.sleep(10000); } catch (InterruptedException ex) {}
     }

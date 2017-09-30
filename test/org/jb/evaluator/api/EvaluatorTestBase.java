@@ -10,9 +10,13 @@ import org.jb.parser.api.*;
 public class EvaluatorTestBase extends ParserTestBase {
 
     protected String[] doTestEvaluator(String source, String...expected) throws Exception {
+        return doTestEvaluator(source, true, expected);
+    }
+
+    protected String[] doTestEvaluator(String source, boolean allowParallel, String...expected) throws Exception {
         ASTNode ast = getAst(source);
         StringBuilder out = new StringBuilder();
-        Evaluator evaluator = new Evaluator(out, getTestDiagnosticListener());
+        Evaluator evaluator = new Evaluator(out, allowParallel, getTestDiagnosticListener());
         evaluator.execute(ast);
         evaluator.dispose();
         if (isDebug()) {

@@ -87,6 +87,11 @@ import java.io.*;
         proceedOnErrorItem.setState(Actions.PROCEED_ON_ERROR.isChecked());
         optionsMenu.add(proceedOnErrorItem);
 
+        JCheckBoxMenuItem allowParallelisation = new JCheckBoxMenuItem(Actions.ALLOW_PARALLELIZATION);
+        allowParallelisation.setMnemonic(Actions.ALLOW_PARALLELIZATION.getMnemonic());
+        allowParallelisation.setState(Actions.ALLOW_PARALLELIZATION.isChecked());
+        optionsMenu.add(allowParallelisation);
+
         menu.add(optionsMenu);
 
         return menu;
