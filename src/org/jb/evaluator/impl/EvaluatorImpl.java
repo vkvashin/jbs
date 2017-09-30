@@ -316,7 +316,7 @@ public class EvaluatorImpl {
             getSymtab().put(smartVar);
             Producer<Value> valueProducer = prepareExpressionIfPossible(transformation, smartVar);
             for (idx[0] = from; idx[0] < to; idx[0]+=inc) {
-                if (idx[0]%100==0 && Thread.currentThread().isInterrupted()) {
+                if (Thread.currentThread().isInterrupted()) {
                     return false;
                 }
                 Value v = valueProducer.produce();
@@ -500,7 +500,7 @@ public class EvaluatorImpl {
         try {
             Producer<Value> valueProducer = prepareExpressionIfPossible(transformation, prevVar, currVar);
             for (idx[0] = from; idx[0] < to; idx[0]+=inc) {
-                if (idx[0]%100==0 && Thread.currentThread().isInterrupted()) {
+                if (Thread.currentThread().isInterrupted()) {
                     return Value.ERROR;
                 }         
                 accumulator[0] = valueProducer.produce();
