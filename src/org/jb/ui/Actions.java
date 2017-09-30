@@ -2,7 +2,6 @@ package org.jb.ui;
 
 import java.awt.event.*;
 import java.net.URL;
-import java.util.function.Predicate;
 import javax.swing.*;
 import static javax.swing.Action.SMALL_ICON;
 
@@ -12,169 +11,77 @@ import static javax.swing.Action.SMALL_ICON;
  */
 public class Actions {
 
-    /*package*/ static final ExitAction EXIT = new ExitAction();
-
-    /*package*/ static final RunAction RUN = new RunAction();
-    /*package*/ static final StopAction STOP = new StopAction();
-    /*package*/ static final AstAction AST = new AstAction();
-    
-    /*package*/ static final AutorunAction AUTORUN = new AutorunAction();
-    /*package*/ static final ProceedOnError PROCEED_ON_ERROR = new ProceedOnError();
-    /*package*/ static final AllowParallelisation ALLOW_PARALLELIZATION = new AllowParallelisation();
-
-    /*package*/ static final OpenAction OPEN = new OpenAction();
-    /*package*/ static final SaveAction SAVE = new SaveAction();
-    /*package*/ static final SaveAsAction SAVE_AS = new SaveAsAction();
-
-    /*package*/ static class ExitAction extends AbstractAction {
-        public ExitAction() {
-            super("Exit");
+    public static class ActionEx extends AbstractAction {
+        private final char mnemonic;
+        private final Runnable worker;
+        public ActionEx(String name, char mnemonic, Runnable worker) {
+            super(name);
+            this.mnemonic = mnemonic;
+            this.worker = worker;
+        }
+        public ActionEx(String name, char mnemonic, Runnable worker, Icon icon) {
+            super(name, icon);
+            this.mnemonic = mnemonic;
+            this.worker = worker;
+            putValue(SMALL_ICON, icon);
         }
         public char getMnemonic() {
-            return 'E';
+            return mnemonic;
         }
+
         @Override
         public void actionPerformed(ActionEvent e) {
-            Controller.getInstance().exit();
+            worker.run();
         }
     }
 
-    /*package*/ static final  class RunAction extends AbstractAction {
-        public RunAction() {
-            super("Run");
-            putValue(SMALL_ICON, createIcon("/org/jb/ui/resources/run.png"));
-        }
-        public char getMnemonic() {
-            return 'R';
-        }
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            Controller.getInstance().runAst();
-        }
-    }
-    
-    /*package*/ static final class StopAction extends AbstractAction {
-        public StopAction() {
-            super("Stop");
-            putValue(SMALL_ICON, createIcon("/org/jb/ui/resources/stop.png"));
-            setEnabled(false);
-        }
-        public char getMnemonic() {
-            return 'S';
-        }
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            Controller.getInstance().stop();
-        }
-    }
-    
-    /*package*/ static final class AstAction extends AbstractAction {
-        public AstAction() {
-            super("Show Ast");
-            putValue(SMALL_ICON, createIcon("/org/jb/ui/resources/ast.gif"));
-        }
-        public char getMnemonic() {
-            return 'A';
-        }
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            Controller.getInstance().showAstInOutputWindow();
-        }
-    }
-
-    /*package*/ static class AutorunAction extends AbstractAction {
-        public AutorunAction() {
-            super("Autorun");
-        }
-        public char getMnemonic() {
-            return 'A';
-        }
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            Controller.getInstance().toggleAutorun();
-            if (Controller.getInstance().isAutorun()) {
-                RUN.setEnabled(false);
-            }
+    public static class CheckboxAction extends ActionEx {
+        private final Predicate predicate;
+        public CheckboxAction(String name, char mnemonic, Runnable worker, Predicate predicate) {
+            super(name, mnemonic, worker);
+            this.predicate = predicate;
         }
         public boolean isChecked() {
-            return Controller.getInstance().isAutorun();
+            return predicate.test();
         }
     }
 
-    /*package*/ static class ProceedOnError extends AbstractAction {
-        public ProceedOnError() {
-            super("Proceed on error");
-        }
-        public char getMnemonic() {
-            return 'e';
-        }
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            Controller.getInstance().toggleProceedOnError();
-        }
-        public boolean isChecked() {
-            return Controller.getInstance().isProceedOnError();
-        }
+    @FunctionalInterface
+    private interface Predicate {
+        boolean test();
     }
 
-    /*package*/ static class AllowParallelisation extends AbstractAction {
-        public AllowParallelisation() {
-            super("Allow Parallelisation");
-        }
-        public char getMnemonic() {
-            return 'p';
-        }
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            Controller.getInstance().toggleParallelisation();
-        }
-        public boolean isChecked() {
-            return Controller.getInstance().isParallelisationAllowed();
-        }
-    }
+    /*package*/ static final ActionEx OPEN = new ActionEx("Open", 'o', () -> Controller.getInstance().open());
+    /*package*/ static final ActionEx SAVE = new ActionEx("Save", 's', () -> Controller.getInstance().save());
+    /*package*/ static final ActionEx SAVE_AS = new ActionEx("Save As", 'a', () -> Controller.getInstance().saveAs());
+    /*package*/ static final ActionEx EXIT = new ActionEx("Exit", 'e', () -> Controller.getInstance().exit());
 
-    /*package*/ static class OpenAction extends AbstractAction {
-        public OpenAction() {
-            super("Open");
-        }
-        public char getMnemonic() {
-            return 'o';
-        }
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            Controller.getInstance().open();
-        }
-    }
+    /*package*/ static final ActionEx RUN = new ActionEx("Run", 'r', () -> Controller.getInstance().runAst(), createIcon("/org/jb/ui/resources/run.png"));
+    /*package*/ static final ActionEx STOP = new ActionEx("Stop", 's', () -> Controller.getInstance().stop(), createIcon("/org/jb/ui/resources/stop.png"));
+    /*package*/ static final ActionEx AST = new ActionEx("Show Ast", 'a', ()-> Controller.getInstance().showAstInOutputWindow(), createIcon("/org/jb/ui/resources/ast.gif"));
 
-    /*package*/ static class SaveAction extends AbstractAction {
-        public SaveAction() {
-            super("Save");
-        }
-        public char getMnemonic() {
-            return 's';
-        }
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            Controller.getInstance().save();
-        }
-    }
+    /*package*/ static final CheckboxAction AUTORUN = new CheckboxAction(
+            "Autorun", 'A',
+            () -> {
+                Controller.getInstance().toggleAutorun();
+                if (Controller.getInstance().isAutorun()) {
+                    RUN.setEnabled(false);
+                }
+            },
+            () -> Controller.getInstance().isAutorun());
 
+    /*package*/ static final CheckboxAction PROCEED_ON_ERROR = new CheckboxAction(
+            "Proceed on error", 'e',
+            () -> Controller.getInstance().toggleProceedOnError(),
+            () -> Controller.getInstance().isProceedOnError());
 
-    /*package*/ static class SaveAsAction extends AbstractAction {
-        public SaveAsAction() {
-            super("Save As");
-        }
-        public char getMnemonic() {
-            return 'a';
-        }
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            Controller.getInstance().saveAs();
-        }
-    }
+    /*package*/ static final CheckboxAction ALLOW_PARALLELIZATION = new CheckboxAction(
+            "Allow Parallelisation", 'p',
+            () -> Controller.getInstance().toggleParallelisation(),
+            () -> Controller.getInstance().isParallelisationAllowed());
 
     /** Returns an ImageIcon, or null if the path was invalid. */
-    private static ImageIcon createIcon(String path) {        
+    private static ImageIcon createIcon(String path) {
         URL url = Actions.class.getResource(path);
         if (url != null) {
             return new ImageIcon(url);

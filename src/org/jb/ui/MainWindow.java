@@ -54,71 +54,42 @@ import javax.swing.*;
                               (screenSize.height - frameSize.height) / 2));        
     }
 
+    private static void addMenuItem(JMenu menu, Actions.ActionEx action) {
+        JMenuItem item = new JMenuItem(action);
+        item.setMnemonic(action.getMnemonic());
+        menu.add(item);
+    }
+
+    private static void addCheckboxMenuItem(JMenu menu, Actions.CheckboxAction action) {
+        JCheckBoxMenuItem item = new JCheckBoxMenuItem(action);
+        item.setMnemonic(action.getMnemonic());
+        item.setState(action.isChecked());
+        menu.add(item);
+    }
+
     private JMenuBar initMenu() {
         JMenuBar menu = new JMenuBar();
 
         JMenu fileMenu = new JMenu("File");
         fileMenu.setMnemonic('F');
-
-        {
-            JMenuItem openItem = new JMenuItem(Actions.OPEN);
-            openItem.setMnemonic(Actions.OPEN.getMnemonic());
-            fileMenu.add(openItem);
-        }
-
-        {
-            JMenuItem saveItem = new JMenuItem(Actions.SAVE);
-            saveItem.setMnemonic(Actions.SAVE.getMnemonic());
-            fileMenu.add(saveItem);
-        }
-
-        {
-            JMenuItem saveAsItem = new JMenuItem(Actions.SAVE_AS);
-            saveAsItem.setMnemonic(Actions.SAVE_AS.getMnemonic());
-            fileMenu.add(saveAsItem);
-        }
-
-        JMenuItem exitItem = new JMenuItem(Actions.EXIT);
-        exitItem.setMnemonic(Actions.EXIT.getMnemonic());
-        fileMenu.add(exitItem);
-            
+        addMenuItem(fileMenu, Actions.OPEN);
+        addMenuItem(fileMenu, Actions.SAVE);
+        addMenuItem(fileMenu, Actions.SAVE_AS);
+        addMenuItem(fileMenu, Actions.EXIT);
         menu.add(fileMenu);
         
         JMenu runMenu = new JMenu("Run");
         runMenu.setMnemonic('R');
-        
-        JMenuItem runItem = new JMenuItem(Actions.RUN);
-        runItem.setMnemonic(Actions.RUN.getMnemonic());
-        runMenu.add(runItem);
-
-        JMenuItem astItem = new JMenuItem(Actions.AST);
-        astItem.setMnemonic(Actions.AST.getMnemonic());
-        runMenu.add(astItem);
-
-        JMenuItem stopItem = new JMenuItem(Actions.STOP);
-        stopItem.setMnemonic(Actions.STOP.getMnemonic());
-        runMenu.add(stopItem);
-
+        addMenuItem(runMenu, Actions.RUN);
+        addMenuItem(runMenu, Actions.AST);
+        addMenuItem(runMenu, Actions.STOP);
         menu.add(runMenu);
 
         JMenu optionsMenu = new JMenu("Options");
         optionsMenu.setMnemonic('O');
-
-        JCheckBoxMenuItem autorunItem = new JCheckBoxMenuItem(Actions.AUTORUN);
-        autorunItem.setMnemonic(Actions.AUTORUN.getMnemonic());
-        autorunItem.setState(Actions.AUTORUN.isChecked());
-        optionsMenu.add(autorunItem);
-
-        JCheckBoxMenuItem proceedOnErrorItem = new JCheckBoxMenuItem(Actions.PROCEED_ON_ERROR);
-        proceedOnErrorItem.setMnemonic(Actions.PROCEED_ON_ERROR.getMnemonic());
-        proceedOnErrorItem.setState(Actions.PROCEED_ON_ERROR.isChecked());
-        optionsMenu.add(proceedOnErrorItem);
-
-        JCheckBoxMenuItem allowParallelisation = new JCheckBoxMenuItem(Actions.ALLOW_PARALLELIZATION);
-        allowParallelisation.setMnemonic(Actions.ALLOW_PARALLELIZATION.getMnemonic());
-        allowParallelisation.setState(Actions.ALLOW_PARALLELIZATION.isChecked());
-        optionsMenu.add(allowParallelisation);
-
+        addCheckboxMenuItem(optionsMenu, Actions.AUTORUN);
+        addCheckboxMenuItem(optionsMenu, Actions.PROCEED_ON_ERROR);
+        addCheckboxMenuItem(optionsMenu, Actions.ALLOW_PARALLELIZATION);
         menu.add(optionsMenu);
 
         return menu;
