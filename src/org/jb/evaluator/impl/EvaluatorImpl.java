@@ -110,7 +110,6 @@ public class EvaluatorImpl {
 
     private void executePrint(PrintStatement stmt) {
         print(stmt.getString().getText());
-        print("\n");
     }
     
     private void executeOut(OutStatement stmt) {
