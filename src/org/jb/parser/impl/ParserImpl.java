@@ -142,9 +142,9 @@ public class ParserImpl {
             BinaryOpExpr.OpKind currOp = getOpKind(LA(0));
             consume(); // operation
             BinaryOpExpr.OpKind stackOp = opStack.isEmpty() ? null : opStack.peek();
-            //if (stackOp != null && stackOp.isStronger(currOp)) {
-            if (stackOp != null && !stackOp.isWeaker(currOp)) {
+            while (stackOp != null && !stackOp.isWeaker(currOp)) {
                 outQueue.add(opStack.pop());
+                stackOp = opStack.isEmpty() ? null : opStack.peek();
             }
             opStack.push(currOp);
             operand = operand();
