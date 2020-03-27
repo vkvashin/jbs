@@ -88,12 +88,13 @@ import org.jb.parser.api.Parser;
             @Override
             public void actionPerformed(ActionEvent e) {
                 assert SwingUtilities.isEventDispatchThread();
+                final String text = editorWindow.getText();
                 if (autorun) {
                     cancelLongTask();
-                    submitLongTask(() -> syntaxCheckOrRun(editorWindow.getText(), updateId, true));
+                    submitLongTask(() -> syntaxCheckOrRun(text, updateId, true));
                 } else {
                     cancelLightweightTask();
-                    submitLightweightTask(() -> syntaxCheckOrRun(editorWindow.getText(), updateId, false));
+                    submitLightweightTask(() -> syntaxCheckOrRun(text, updateId, false));
 
                 }
             }
@@ -167,7 +168,7 @@ import org.jb.parser.api.Parser;
         } catch (UnsupportedEncodingException | TokenStreamException ex) {
             outputWindow.printErr(ex.getLocalizedMessage());
         } catch (Throwable ex) {
-            outputWindow.printErr("Unexpected error: " + ex.getLocalizedMessage());
+            outputWindow.printErr("Unexpected error: " + ex.getClass() + ' ' + ex.getLocalizedMessage());
         }
     }
 
@@ -197,7 +198,7 @@ import org.jb.parser.api.Parser;
         } catch (OutOfMemoryError ex) {
             outputWindow.printErr("Insufficient memory to complete the operation");
         } catch (Throwable ex) {
-            outputWindow.printErr("Unexpected error: " + ex.getLocalizedMessage());
+            outputWindow.printErr("Unexpected error: " + ex.getClass().getName() + ' ' + ex.getLocalizedMessage());
         }
     }
 
@@ -231,7 +232,7 @@ import org.jb.parser.api.Parser;
                 } catch (OutOfMemoryError ex) {
                     outputWindow.printErr("Insufficient memory to complete the operation");
                 } catch (Throwable ex) {
-                    outputWindow.printErr("Unexpected error: " + ex.getLocalizedMessage());
+                    outputWindow.printErr("Unexpected error: " + ex.getClass().getName() + ' ' + ex.getLocalizedMessage());
                 } finally {
                     SwingUtilities.invokeLater(() -> Actions.STOP.setEnabled(false));
                 }
@@ -240,6 +241,8 @@ import org.jb.parser.api.Parser;
             outputWindow.printErr(ex.getLocalizedMessage());
         } catch (TokenStreamException ex) {
             outputWindow.printErr(ex.getLocalizedMessage());
+        } catch (Throwable ex) {
+            outputWindow.printErr("Unexpected error: " + ex.getClass().getName() + ' ' + ex.getLocalizedMessage());
         }
         if (TRACE) {
             System.out.println("--- error check done ---");

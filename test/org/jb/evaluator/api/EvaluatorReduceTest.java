@@ -42,7 +42,7 @@ public class EvaluatorReduceTest extends EvaluatorTestBase {
             "var y = reduce(x, 0, x y -> x+y+0.1)\n" +
             "out y\n";
         setDebug(true);
-        doTestEvaluator(source, "6.30*");
+        doTestEvaluator(source, "6.3*");
         assertEmptyDiagnostics();
     }
 
